@@ -32,7 +32,7 @@ const APP_CONFIG = {
   //    "Authorized JavaScript origins" e "Authorized redirect URIs"
   //    Ative também a "Google Sheets API" em APIs & Services.
   // --------------------------------------------------------
-  googleClientId: "608371479778-vsd35u9piu6lbftmouoful9o46r7l3u8.apps.googleusercontent.com",
+  googleClientId: "727189068535-fe277mfbt62m1ct4j5hbjn6d9minuhl1.apps.googleusercontent.com",
 
   // Escopo necessário para ler/gravar na planilha do usuário logado
   googleScopes: "https://www.googleapis.com/auth/spreadsheets",
