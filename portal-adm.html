@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bafômetro JCA · Administração</title>
+<meta name="theme-color" content="#080C14">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="topbar">
+    <div class="brand">
+      <img src="https://res.cloudinary.com/dxnruvmgu/image/upload/v1770865291/GRUPOJCA_branco_r0nvw0.png" alt="Grupo JCA">
+      <span class="brand-text">Bafômetro <span>JCA</span></span>
+    </div>
+    <div class="user-chip">
+      <img class="company-logo-badge" id="companyLogo" alt="" style="display:none;">
+      <div>
+        <div id="userName" style="color:var(--tx); font-weight:600; font-family:var(--fd);">—</div>
+        <div><span class="role-tag">ADM</span> · <span id="userEmpresa"></span></div>
+      </div>
+      <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Mudar tema"></button>
+      <button class="btn secondary" id="btnSair" style="padding:8px 12px; font-size:11px;">Sair</button>
+    </div>
+  </div>
+
+  <main>
+    <div class="tabs">
+      <div class="tab active" data-panel="painelEquipamento">Equipamentos</div>
+      <div class="tab" data-panel="painelUsuario">Usuários</div>
+      <div class="tab" data-panel="painelOcorrencia">Ocorrências</div>
+    </div>
+
+    <!-- ===================== CADASTRAR EQUIPAMENTO ===================== -->
+    <section class="tab-panel" id="painelEquipamento">
+      <form id="formEquipamento" class="card">
+        <h2>Cadastrar equipamento</h2>
+
+        <div class="field">
+          <label>Modelo</label>
+          <input type="text" id="eqModelo" placeholder="Ex: Drager Alcotest 6820" required>
+        </div>
+        <div class="field">
+          <label>Número de série</label>
+          <input type="text" id="eqSerie" placeholder="Ex: SN-88231" required>
+        </div>
+        <div class="field">
+          <label>Aferição</label>
+          <input type="date" id="eqAfericao" required>
+        </div>
+        <div class="field">
+          <label>Validade</label>
+          <input type="date" id="eqValidade" required>
+        </div>
+
+        <button type="submit" class="btn" id="btnCadastrarEquip">Cadastrar Equipamento</button>
+      </form>
+
+      <div class="card">
+        <h2>Equipamentos cadastrados</h2>
+        <div id="listaEquipamentos"></div>
+      </div>
+    </section>
+
+    <!-- ===================== CADASTRAR USUÁRIO ===================== -->
+    <section class="tab-panel" id="painelUsuario" style="display:none;">
+      <form id="formUsuario" class="card">
+        <h2>Cadastrar usuário</h2>
+
+        <div class="field">
+          <label>Matrícula</label>
+          <input type="text" id="usMatricula" required>
+        </div>
+        <div class="field">
+          <label>Nome</label>
+          <input type="text" id="usNome" required>
+        </div>
+        <div class="field">
+          <label>E-mail corporativo</label>
+          <input type="email" id="usEmail" placeholder="nome@viacaocometa.com" required>
+        </div>
+        <div class="field">
+          <label>Empresa</label>
+          <input type="text" id="usEmpresa" placeholder="Ex: Viação Cometa" required>
+        </div>
+
+        <button type="submit" class="btn" id="btnCadastrarUsuario">Cadastrar Usuário</button>
+      </form>
+
+      <div class="card">
+        <h2>Usuários cadastrados (OPERAÇÃO / TRÁFEGO)</h2>
+        <div id="listaUsuarios"></div>
+      </div>
+    </section>
+
+    <!-- ===================== REPORTAR/GERENCIAR OCORRÊNCIA DE EQUIPAMENTO ===================== -->
+    <section class="tab-panel" id="painelOcorrencia" style="display:none;">
+      <form id="formOcorrencia" class="card">
+        <h2>Ocorrência de equipamento</h2>
+
+        <div class="field">
+          <label>Equipamento</label>
+          <select id="campoEquipamentoOcorrencia" required></select>
+        </div>
+
+        <div class="field">
+          <label>Motivo</label>
+          <select id="campoMotivoOcorrencia" required>
+            <option value="">Selecione…</option>
+            <option value="Manutenção">Manutenção</option>
+            <option value="Baixa de Equipamento">Baixa de Equipamento</option>
+          </select>
+        </div>
+
+        <div class="field" id="blocoMotivoManutencao" style="display:none;">
+          <label>Motivo da manutenção</label>
+          <select id="campoMotivoManutencao">
+            <option value="Quebra de Equipamento">Quebra de Equipamento</option>
+            <option value="Defeito do Equipamento">Defeito do Equipamento</option>
+            <option value="Aferição">Aferição</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn" id="btnRegistrarOcorrencia">Registrar Ocorrência</button>
+      </form>
+
+      <div class="banner warn">
+        <span class="status-dot warn"></span>
+        <span>Ao escolher "Baixa de Equipamento" o equipamento sai imediatamente da lista de uso. Ao escolher "Manutenção", ele fica bloqueado até um ADM lançar a data de retorno na aba MANUTENÇÃO EQUIPAMENTOS.</span>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/sheets.js"></script>
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/firebase-init.js"></script>
+<script src="js/pwa.js"></script>
+<script type="module" src="js/adm.js"></script>
+</body>
+</html>

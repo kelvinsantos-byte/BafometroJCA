@@ -1,0 +1,19 @@
+{
+  "_readme": "Exemplos de linhas já no formato das abas BASE SAO / BASE RIO / BASE SUL: [Data e Hora, Empresa, Aplicador, Contrato, Motorista, Resultado]",
+
+  "BASE SAO": [
+    ["22/07/2026 06:14", "Viação Cometa", "Renata Souza Lima", "CT-SP-0012 Fretamento Contínuo", "Carlos Eduardo Silva — mat. 10234", "Aprovado"],
+    ["22/07/2026 06:22", "Viação Cometa", "Renata Souza Lima", "CT-SP-0012 Fretamento Contínuo", "José Roberto Almeida — mat. 10298", "Aprovado"],
+    ["23/07/2026 13:05", "Viação Cometa", "Juliana Martins", "CT-SP-0045 Fretamento Eventual", "Eduardo Nascimento Dias — mat. 10560", "Reprovado"]
+  ],
+
+  "BASE RIO": [
+    ["21/07/2026 05:40", "Auto Viação 1001", "Bruno Cardoso", "CT-RJ-0031 Fretamento Contínuo", "Marcos Vinícius Costa — mat. 10345", "Aprovado"],
+    ["21/07/2026 05:55", "SIT Macaé", "Bruno Cardoso", "CT-RJ-0077 Fretamento Contínuo", "Fernando Gomes Rocha — mat. 10489", "Aprovado"]
+  ],
+
+  "BASE SUL": [
+    ["20/07/2026 07:12", "Auto Viação Catarinense", "Diego Fernandes", "CT-SUL-0008 Fretamento Turismo", "Paulo Henrique Souza — mat. 10422", "Aprovado"],
+    ["20/07/2026 07:30", "Opção Fretur", "Camila Torres", "CT-SUL-0019 Fretamento Eventual", "André Luiz Barbosa — mat. 10537", "Aprovado"]
+  ]
+}

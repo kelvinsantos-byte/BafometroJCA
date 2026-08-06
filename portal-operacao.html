@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bafômetro JCA · Operação</title>
+<meta name="theme-color" content="#080C14">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="topbar">
+    <div class="brand">
+      <img src="https://res.cloudinary.com/dxnruvmgu/image/upload/v1770865291/GRUPOJCA_branco_r0nvw0.png" alt="Grupo JCA">
+      <span class="brand-text">Bafômetro <span>JCA</span></span>
+    </div>
+    <div class="user-chip">
+      <img class="company-logo-badge" id="companyLogo" alt="" style="display:none;">
+      <div>
+        <div id="userName" style="color:var(--tx); font-weight:600; font-family:var(--fd);">—</div>
+        <div><span class="role-tag" id="userRole">—</span> · <span id="userEmpresa"></span></div>
+      </div>
+      <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Mudar tema"></button>
+      <button class="btn secondary" id="btnSair" style="padding:8px 12px; font-size:11px;">Sair</button>
+    </div>
+  </div>
+
+  <main>
+
+    <!-- ===================== RETESTES PENDENTES (timer de 15min) ===================== -->
+    <div class="card hidden" id="painelRetestes">
+      <h2>Retestes pendentes</h2>
+      <div id="listaRetestes"></div>
+    </div>
+
+    <!-- ===================== APLICAR TESTE ===================== -->
+    <section class="tab-panel" id="painelTeste">
+
+      <div id="resultCard" class="card" style="display:none; text-align:center;">
+        <h2>Último resultado</h2>
+        <div class="result-gauge" id="resultGauge"><span>—</span></div>
+        <p class="mono" style="font-size:13px;">Motorista: <span id="resultDriver"></span></p>
+        <p class="mono" style="font-size:12px; color:var(--ink-500);" id="resultTime"></p>
+      </div>
+
+      <form id="formTeste" class="card">
+        <h2>Dados do teste</h2>
+
+        <div class="banner hidden" id="bannerReteste"></div>
+
+        <div class="field autocomplete-wrap">
+          <label>Motorista</label>
+          <input id="campoMotorista" placeholder="Digite o nome ou matrícula…" required autocomplete="off">
+          <div class="autocomplete-list hidden" id="motoristaSugestoes"></div>
+          <p class="hint" id="motoristaInfo"></p>
+        </div>
+
+        <div class="field hidden" id="blocoHistorico">
+          <label>Últimos testes deste motorista</label>
+          <div id="historicoMotorista"></div>
+        </div>
+
+        <div class="field">
+          <label>Empresa</label>
+          <select id="campoEmpresa" required>
+            <option value="">Selecione a empresa…</option>
+          </select>
+          <p class="hint">Preenchido automaticamente ao escolher o motorista — pode ajustar manualmente se necessário.</p>
+        </div>
+
+        <div class="field">
+          <label>Regional</label>
+          <select id="campoBase" required>
+            <option value="">Selecione a regional…</option>
+            <option value="SAO">SAO</option>
+            <option value="RIO">RIO</option>
+            <option value="SUL">SUL</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Local de Aplicação</label>
+          <select id="campoLocalTipo" required>
+            <option value="">Selecione…</option>
+            <option value="GARAGEM">Garagem</option>
+            <option value="CONTRATO">Contratos de Fretamento</option>
+          </select>
+        </div>
+
+        <div class="field hidden" id="blocoContrato">
+          <label>Contrato</label>
+          <select id="campoContrato"></select>
+        </div>
+
+        <div class="field hidden" id="blocoGaragem">
+          <label>Garagem</label>
+          <select id="campoGaragem"></select>
+          <p class="hint">Origem: aba RECEPÇÃO ATIVA.</p>
+        </div>
+
+        <div class="field">
+          <label>Equipamento utilizado</label>
+          <select id="campoEquipamento" required></select>
+        </div>
+
+        <div class="banner hidden" id="bannerEquipamento"></div>
+
+        <div class="field">
+          <label>Resultado do teste</label>
+          <div class="result-options">
+            <button type="button" class="result-btn" data-result="Aprovado">✓ Aprovado</button>
+            <button type="button" class="result-btn" data-result="Reprovado">✕ Reprovado</button>
+          </div>
+        </div>
+
+        <div class="field hidden" id="blocoResultadoNumerico">
+          <label>Resultado (mg/L)</label>
+          <input type="text" id="campoResultadoNumerico" placeholder="0.00" inputmode="decimal" maxlength="4">
+          <p class="hint" id="resultadoNumericoErro" style="color:var(--red);"></p>
+        </div>
+
+        <button type="submit" class="btn" id="btnRegistrarTeste" disabled>Registrar Teste</button>
+      </form>
+    </section>
+
+  </main>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/sheets.js"></script>
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/firebase-init.js"></script>
+<script src="js/pwa.js"></script>
+<script type="module" src="js/operacao.js"></script>
+</body>
+</html>

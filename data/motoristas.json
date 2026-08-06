@@ -1,0 +1,14 @@
+[
+  { "matricula": "000001", "nome": "Carlos Eduardo Silva", "empresa": "VIAÇÃO COMETA", "setor": "CIM" },
+  { "matricula": "000002", "nome": "José Roberto Almeida", "empresa": "VIAÇÃO COMETA", "setor": "SAO" },
+  { "matricula": "000003", "nome": "Marcos Vinícius Costa", "empresa": "AUTO VIAÇÃO 1001", "setor": "RIO" },
+  { "matricula": "000004", "nome": "Antônio Ferreira Lima", "empresa": "AUTO VIAÇÃO 1001", "setor": "MAC" },
+  { "matricula": "000005", "nome": "Paulo Henrique Souza", "empresa": "AUTO VIAÇÃO CATARINENSE", "setor": "CTB" },
+  { "matricula": "000006", "nome": "Ricardo Alves Pereira", "empresa": "AUTO VIAÇÃO CATARINENSE", "setor": "JOI" },
+  { "matricula": "000007", "nome": "Fernando Gomes Rocha", "empresa": "SIT / MACAENSE", "setor": "MAC" },
+  { "matricula": "000008", "nome": "Sérgio Luiz Martins", "empresa": "OPÇÃO - TURISMO E FRETAMENTOS", "setor": "CBA" },
+  { "matricula": "000009", "nome": "André Luiz Barbosa", "empresa": "OPÇÃO - TURISMO E FRETAMENTOS", "setor": "VOT" },
+  { "matricula": "000010", "nome": "Eduardo Nascimento Dias", "empresa": "VIAÇÃO COMETA", "setor": "SCB" },
+  { "matricula": "000011", "nome": "Marcelo Souza Prado", "empresa": "RÁPIDO RIBEIRÃO", "setor": "RAO" },
+  { "matricula": "000012", "nome": "Renato Alves Fonseca", "empresa": "EXPRESSO DO SUL", "setor": "G03" }
+]

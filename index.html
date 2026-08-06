@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bafômetro JCA</title>
+<meta name="theme-color" content="#080C14">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body>
+
+<button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Mudar tema"
+  style="position:fixed; top:14px; right:16px; z-index:300;"></button>
+
+<div class="screen">
+  <div class="login-wrap">
+    <div class="login-logos-solo">
+      <img class="logo-dark" src="https://res.cloudinary.com/dxnruvmgu/image/upload/v1770865291/GRUPOJCA_branco_r0nvw0.png" alt="Grupo JCA">
+      <img class="logo-light" src="https://res.cloudinary.com/dxnruvmgu/image/upload/v1770942727/JCA_f9syze.png" alt="Grupo JCA">
+      <img class="logo-dark" src="https://res.cloudinary.com/dxnruvmgu/image/upload/v1776647491/Intelig%C3%AAncia_horizontal_branco_yxlsyw.png" alt="Inteligência Operacional">
+      <img class="logo-light" src="https://res.cloudinary.com/dln0ctawv/image/upload/v1781283106/Intelig%C3%AAncia_horizontal_preto_p6gikp_mwb3ts.png" alt="Inteligência Operacional">
+    </div>
+    <div>
+      <h1 class="login-title">Controle de Bafômetro</h1>
+    </div>
+
+    <button class="btn-google" id="btnLogin">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.2 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.2 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-2.1 14.1-5.6l-6.5-5.5C29.6 34.7 26.9 35.6 24 35.6c-5.3 0-9.8-3.4-11.4-8.1l-6.6 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.7 2.1-2 3.9-3.7 5.3l6.5 5.5C41.5 36.4 44 30.7 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+      Entrar com Google
+    </button>
+
+    <div id="mockLoginBox" style="display:none; width:100%; max-width:300px;">
+      <div class="banner warn"><span class="status-dot warn"></span>
+        <span>MODO DE TESTE: js/config.js ainda não tem um Google Client ID real. Escolha um usuário fictício para navegar no app.</span>
+      </div>
+      <div class="field">
+        <label>Usuário simulado</label>
+        <select id="mockUserSelect">
+          <option value="fabiana.ribeiro@viacaocometa.com">ADM · Fabiana Ribeiro (Cometa)</option>
+          <option value="renata.lima@viacaocometa.com">Instrutora · Renata Souza Lima (Cometa)</option>
+          <option value="juliana.martins@viacaocometa.com">Operação · Juliana Martins (Cometa)</option>
+          <option value="camila.torres@opcaofretur.com.br">Operação · Camila Torres (Opção Fretur)</option>
+        </select>
+      </div>
+      <button class="btn secondary" id="btnMockLogin">Entrar em modo teste</button>
+    </div>
+
+    <p class="login-error" id="loginError"></p>
+  </div>
+
+  <footer class="login-footer">
+    <div class="partner-logos">
+      <span class="partner-logo-pair" role="img" aria-label="Expresso do Sul">
+        <span class="logo-face logo-dark" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785376783/EXP_Brancosb_pjffh8.png')"></span>
+        <span class="logo-face logo-light" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785159113/EXP_sembolas_vnpljs.png')"></span>
+      </span>
+      <span class="partner-logo-pair" role="img" aria-label="Auto Viação 1001">
+        <span class="logo-face" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1779671790/1001_qisjtr_1_pzpzqw.png')"></span>
+      </span>
+      <span class="partner-logo-pair" role="img" aria-label="1001 Urbano">
+        <span class="logo-face logo-dark" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1781288212/1001_Urbano_Branco_noqa7d_wqaxuk.png')"></span>
+        <span class="logo-face logo-light" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1781307419/1001_URB_m1lbdu.png')"></span>
+      </span>
+      <span class="partner-logo-pair" role="img" aria-label="Viação Cometa">
+        <span class="logo-face logo-dark" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785376595/Cometa_brancoSBHD_x09jcs_tvuh8m.png')"></span>
+        <span class="logo-face logo-light" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785159067/COM_sembolas_m1eiqc.png')"></span>
+      </span>
+      <span class="partner-logo-pair" role="img" aria-label="Auto Viação Catarinense">
+        <span class="logo-face logo-dark" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785376720/Catarinense_BrancoHD_nodz19_v5amix.png')"></span>
+        <span class="logo-face logo-light" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1779671813/AVC_zk4pe9_k4jgau.png')"></span>
+      </span>
+      <span class="partner-logo-pair" role="img" aria-label="SIT Macaé">
+        <span class="logo-face logo-dark" style="background-image:url('https://res.cloudinary.com/dxnruvmgu/image/upload/v1776645576/Sit_gv7d2x.png')"></span>
+        <span class="logo-face logo-light" style="background-image:url('https://res.cloudinary.com/dxnruvmgu/image/upload/v1778634339/Sit_preto_rucocl.png')"></span>
+      </span>
+      <span class="partner-logo-pair" role="img" aria-label="Opção Fretur">
+        <span class="logo-face" style="background-image:url('https://res.cloudinary.com/dxnruvmgu/image/upload/v1776645466/Op%C3%A7%C3%A3o_ztgpnc.png')"></span>
+      </span>
+    </div>
+    <p class="login-copyright">© 2026 Inteligência Operacional</p>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/sheets.js"></script>
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/firebase-init.js"></script>
+<script src="js/pwa.js"></script>
+<script type="module">
+  const btnLogin = document.getElementById("btnLogin");
+  const loginError = document.getElementById("loginError");
+  const toast = document.getElementById("toast");
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("visible");
+    setTimeout(() => toast.classList.remove("visible"), 3000);
+  }
+
+  function showError(msg) {
+    loginError.textContent = msg;
+    loginError.classList.add("visible");
+  }
+
+  async function boot() {
+    try { FirebaseDB.init(); } catch (e) { console.warn(e); }
+    await Auth.init();
+
+    if (Auth.isMockMode()) {
+      btnLogin.style.display = "none";
+      document.getElementById("mockLoginBox").style.display = "block";
+    }
+
+    // Se já existe sessão válida, tenta ir direto para o portal certo
+    const cachedUser = Auth.getCurrentUser();
+    if (cachedUser && Auth.getAccessToken()) {
+      redirecionar(cachedUser).catch(() => { /* sessão expirada, segue no login */ });
+    }
+  }
+
+  document.getElementById("btnMockLogin").addEventListener("click", async () => {
+    loginError.classList.remove("visible");
+    const email = document.getElementById("mockUserSelect").value;
+    try {
+      const userInfo = await Auth.mockSignIn(email);
+      await redirecionar(userInfo);
+    } catch (err) {
+      showError(err.message || "Erro no login simulado.");
+    }
+  });
+
+  async function redirecionar(userInfo) {
+    const perfil = await Auth.resolveProfile(userInfo.email);
+    if (!perfil) {
+      showError("Seu e-mail é do domínio JCA, mas não está cadastrado na plataforma. Procure um administrador.");
+      return;
+    }
+    sessionStorage.setItem("baf_perfil", JSON.stringify(perfil));
+    if (perfil.role === "adm") {
+      window.location.href = "portal-adm.html";
+    } else {
+      window.location.href = "portal-operacao.html";
+    }
+  }
+
+  btnLogin.addEventListener("click", async () => {
+    loginError.classList.remove("visible");
+    btnLogin.disabled = true;
+    try {
+      const userInfo = await Auth.signIn();
+      await redirecionar(userInfo);
+    } catch (err) {
+      showError(err.message || "Não foi possível entrar. Tente novamente.");
+    } finally {
+      btnLogin.disabled = false;
+    }
+  });
+
+  boot();
+</script>
+</body>
+</html>

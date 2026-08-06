@@ -1,0 +1,52 @@
+{
+  "_readme": "Dados fictícios usados automaticamente pelo js/sheets.js quando APP_CONFIG.spreadsheetId ainda não foi preenchido em js/config.js. Sirva para testar toda a navegação do PWA sem depender do Google Sheets real.",
+
+  "ADM": [
+    ["9001", "Fabiana Ribeiro", "Viação Cometa", "fabiana.ribeiro@viacaocometa.com"],
+    ["9002", "Marcelo Tavares", "Auto Viação 1001", "marcelo.tavares@autoviacao1001.com.br"]
+  ],
+
+  "INSTRUTORES JCA": [
+    ["8001", "Renata Souza Lima", "Viação Cometa", "renata.lima@viacaocometa.com", "Matriz SP"],
+    ["8002", "Bruno Cardoso", "SIT Macaé", "bruno.cardoso@sitmacae.com.br", "Filial RJ"]
+  ],
+
+  "OPERAÇÃO / TRÁFEGO": [
+    ["7001", "Juliana Martins", "Viação Cometa", "juliana.martins@viacaocometa.com"],
+    ["7002", "Diego Fernandes", "Auto Viação Catarinense", "diego.fernandes@autoviacaocatarinense.com.br"],
+    ["7003", "Camila Torres", "Opção Fretur", "camila.torres@opcaofretur.com.br"]
+  ],
+
+  "CONTRATOS": [
+    ["Viação Cometa", "CT-SP-0012 Fretamento Contínuo"],
+    ["Viação Cometa", "CT-SP-0045 Fretamento Eventual"],
+    ["Auto Viação 1001", "CT-RJ-0031 Fretamento Contínuo"],
+    ["Auto Viação Catarinense", "CT-SUL-0008 Fretamento Turismo"],
+    ["SIT Macaé", "CT-RJ-0077 Fretamento Contínuo"],
+    ["Opção Fretur", "CT-SUL-0019 Fretamento Eventual"]
+  ],
+
+  "RECEPÇÃO ATIVA": [
+    ["Viação Cometa", "Garagem Barra Funda"],
+    ["Viação Cometa", "Garagem Santo Amaro"],
+    ["Auto Viação 1001", "Garagem Duque de Caxias"],
+    ["Auto Viação Catarinense", "Garagem Itajaí"],
+    ["SIT Macaé", "Garagem Macaé Centro"],
+    ["Opção Fretur", "Garagem Curitiba"]
+  ],
+
+  "CONTROLE DE EQUIPAMENTOS": [
+    ["Drager Alcotest 6820", "SN-88231", "2026-02-10", "2026-08-10", "Ativo", ""],
+    ["Drager Alcotest 6820", "SN-88245", "2025-12-01", "2026-06-01", "Ativo", ""],
+    ["Alcofix ABS", "SN-77102", "2026-03-05", "2027-03-05", "Ativo", ""],
+    ["Alcofix ABS", "SN-77119", "2025-06-20", "2025-12-20", "Ativo", ""]
+  ],
+
+  "MANUTENÇÃO EQUIPAMENTOS": [
+    ["SN-77119", "2026-07-01", "Aferição", "", "Fabiana Ribeiro"]
+  ],
+
+  "BASE SAO": [],
+  "BASE RIO": [],
+  "BASE SUL": []
+}
