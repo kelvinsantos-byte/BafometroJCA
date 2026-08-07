@@ -1,4 +1,4 @@
-const CACHE_NAME = "bafometro-jca-v14";
+const CACHE_NAME = "bafometro-jca-v15";
 
 const APP_SHELL = [
   "index.html",
