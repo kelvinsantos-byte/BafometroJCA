@@ -178,7 +178,7 @@ main { flex: 1; padding: 20px 18px; max-width: 640px; width: 100%; margin: 0 aut
 }
 .partner-logos {
   display: flex; align-items: center; justify-content: center;
-  flex-wrap: wrap; gap: 8px;
+  flex-wrap: wrap; gap: 14px;
   padding-bottom: 12px;
 }
 /* Caixa de tamanho fixo com a logo como background-image: o tamanho da
@@ -198,6 +198,8 @@ main { flex: 1; padding: 20px 18px; max-width: 640px; width: 100%; margin: 0 aut
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
+  background-origin: content-box; /* essencial: sem isso, padding não afeta o tamanho da imagem */
+  box-sizing: border-box;
 }
 
 .login-copyright {

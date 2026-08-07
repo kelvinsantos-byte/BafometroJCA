@@ -54,31 +54,57 @@
 
   <footer class="login-footer">
     <div class="partner-logos">
+      <!--
+        COMO AJUSTAR O TAMANHO DE CADA LOGO:
+        O "padding" dentro do style="..." de cada <span class="logo-face">
+        controla o tamanho visual daquela logo específica.
+          - AUMENTAR o padding  -> logo fica MENOR (mais espaço reservado ao redor)
+          - DIMINUIR o padding  -> logo fica MAIOR (menos espaço ao redor)
+        Formato: padding: [topo/baixo]px [esquerda/direita]px;
+        O espaço ENTRE as logos é fixo e igual pra todas (não precisa mexer aqui,
+        é controlado em css/style.css pela regra ".partner-logos { gap: 8px; }").
+        Se a logo tiver versão clara E escura (duas linhas), ajuste cada uma
+        separadamente — elas podem precisar de valores diferentes.
+      -->
+
+      <!-- Expresso do Sul -->
       <span class="partner-logo-pair" role="img" aria-label="Expresso do Sul">
-        <span class="logo-face logo-dark" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785376783/EXP_Brancosb_pjffh8.png')"></span>
-        <span class="logo-face logo-light" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785159113/EXP_sembolas_vnpljs.png')"></span>
+        <span class="logo-face logo-dark" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785376783/EXP_Brancosb_pjffh8.png')"></span>
+        <span class="logo-face logo-light" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785159113/EXP_sembolas_vnpljs.png')"></span>
       </span>
+
+      <!-- Auto Viação 1001 (mesma logo nos dois temas) -->
       <span class="partner-logo-pair" role="img" aria-label="Auto Viação 1001">
-        <span class="logo-face" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1779671790/1001_qisjtr_1_pzpzqw.png')"></span>
+        <span class="logo-face" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1779671790/1001_qisjtr_1_pzpzqw.png')"></span>
       </span>
+
+      <!-- 1001 Urbano -->
       <span class="partner-logo-pair" role="img" aria-label="1001 Urbano">
-        <span class="logo-face logo-dark" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1781288212/1001_Urbano_Branco_noqa7d_wqaxuk.png')"></span>
-        <span class="logo-face logo-light" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1781307419/1001_URB_m1lbdu.png')"></span>
+        <span class="logo-face logo-dark" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1781288212/1001_Urbano_Branco_noqa7d_wqaxuk.png')"></span>
+        <span class="logo-face logo-light" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1781307419/1001_URB_m1lbdu.png')"></span>
       </span>
+
+      <!-- Viação Cometa -->
       <span class="partner-logo-pair" role="img" aria-label="Viação Cometa">
-        <span class="logo-face logo-dark" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785376595/Cometa_brancoSBHD_x09jcs_tvuh8m.png')"></span>
-        <span class="logo-face logo-light" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785159067/COM_sembolas_m1eiqc.png')"></span>
+        <span class="logo-face logo-dark" style="padding: 2px 2%; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785376595/Cometa_brancoSBHD_x09jcs_tvuh8m.png')"></span>
+        <span class="logo-face logo-light" style="padding: 2px 2px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785159067/COM_sembolas_m1eiqc.png')"></span>
       </span>
+
+      <!-- Auto Viação Catarinense -->
       <span class="partner-logo-pair" role="img" aria-label="Auto Viação Catarinense">
-        <span class="logo-face logo-dark" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785376720/Catarinense_BrancoHD_nodz19_v5amix.png'); padding: 4px 8px;"></span>
-        <span class="logo-face logo-light" style="background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1779671813/AVC_zk4pe9_k4jgau.png')"></span>
+        <span class="logo-face logo-dark" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1785376720/Catarinense_BrancoHD_nodz19_v5amix.png')"></span>
+        <span class="logo-face logo-light" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1779671813/AVC_zk4pe9_k4jgau.png')"></span>
       </span>
+
+      <!-- SIT Macaé -->
       <span class="partner-logo-pair" role="img" aria-label="SIT Macaé">
-        <span class="logo-face logo-dark" style="background-image:url('https://res.cloudinary.com/dxnruvmgu/image/upload/v1776645576/Sit_gv7d2x.png')"></span>
-        <span class="logo-face logo-light" style="background-image:url('https://res.cloudinary.com/dxnruvmgu/image/upload/v1778634339/Sit_preto_rucocl.png'); padding: 6px 14px;"></span>
+        <span class="logo-face logo-dark" style="padding: 3px 8px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786067075/SIT_branco_bftski.png')"></span>
+        <span class="logo-face logo-light" style="padding: 3px 8px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1781288180/Sit_preto_rucocl_v0xufi.png')"></span>
       </span>
+
+      <!-- Opção Fretur (mesma logo nos dois temas) -->
       <span class="partner-logo-pair" role="img" aria-label="Opção Fretur">
-        <span class="logo-face" style="background-image:url('https://res.cloudinary.com/dxnruvmgu/image/upload/v1776645466/Op%C3%A7%C3%A3o_ztgpnc.png')"></span>
+        <span class="logo-face" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dxnruvmgu/image/upload/v1776645466/Op%C3%A7%C3%A3o_ztgpnc.png')"></span>
       </span>
     </div>
     <p class="login-copyright">© 2026 Inteligência Operacional</p>
