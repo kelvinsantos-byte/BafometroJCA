@@ -128,7 +128,7 @@ const APP_CONFIG = {
   //    para os logos brancos ficarem legíveis mesmo no tema claro.
   // --------------------------------------------------------
   brand: {
-    grupoJcaLogo: "https://res.cloudinary.com/dxnruvmgu/image/upload/v1770865291/GRUPOJCA_branco_r0nvw0.png",
+    grupoJcaLogo: "https://res.cloudinary.com/dln0ctawv/image/upload/v1786221931/jca-dark_feydzd.png",
     inteligenciaLogo: "https://res.cloudinary.com/dxnruvmgu/image/upload/v1776647491/Intelig%C3%AAncia_horizontal_branco_yxlsyw.png"
   },
 

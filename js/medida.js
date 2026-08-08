@@ -11,8 +11,8 @@
 
 const $ = (id) => document.getElementById(id);
 
-const LOGO_JCA_ESCURO = "https://res.cloudinary.com/dxnruvmgu/image/upload/v1770865291/GRUPOJCA_branco_r0nvw0.png";
-const LOGO_JCA_CLARO  = "https://res.cloudinary.com/dln0ctawv/image/upload/v1779238658/JCA_1_mp1ic7.png";
+const LOGO_JCA_ESCURO = "https://res.cloudinary.com/dln0ctawv/image/upload/v1786221931/jca-dark_feydzd.png";
+const LOGO_JCA_CLARO  = "https://res.cloudinary.com/dln0ctawv/image/upload/v1786221931/jca-light_ymtxih.png";
 
 let MOTORISTAS = [];
 let funcionarioSelecionado = null;

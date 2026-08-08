@@ -36,7 +36,7 @@ os nomes e a ordem das colunas (linha 1 = cabeçalho):
 
 | Aba | Colunas |
 |---|---|
-| `BASE SAO`, `BASE RIO`, `BASE SUL` | A Data/Hora · B Empresa · C Aplicador · D Contrato/Local · E Motorista · F Setor · G Resultado Teste · **H Resultado (mg/L)** · **I Reteste (Aprovado/Reprovado)** · **J Resultado do Reteste (mg/L)** |
+| `BASE SAO`, `BASE RIO`, `BASE SUL` | A Data/Hora · B Empresa · C Aplicador · D Contrato/Local · E Motorista · F Setor · G Resultado Teste (Negativo/Positivo) · H Resultado (mg/L) · I Reteste · J Resultado do Reteste (mg/L) · **K Equipamento** |
 | `CONTROLE DE EQUIPAMENTOS` | A Modelo · B Nº Série · C Aferição · D Validade · E Status · F Data de Baixa · G Garagem · **H Empresa** |
 | `MANUTENÇÃO EQUIPAMENTOS` | A Modelo · B Nº Série · C Data de Envio · D Data de Retorno · E Motivo Manutenção · F Baixa (data) · **G Registrado por** |
 | `CONTRATOS` | A Empresa · B Contrato |

@@ -16,8 +16,8 @@
 
   <div class="topbar">
     <div class="brand">
-      <img class="logo-dark" src="https://res.cloudinary.com/dxnruvmgu/image/upload/v1770865291/GRUPOJCA_branco_r0nvw0.png" alt="Grupo JCA">
-      <img class="logo-light" src="https://res.cloudinary.com/dln0ctawv/image/upload/v1779238658/JCA_1_mp1ic7.png" alt="Grupo JCA">
+      <img class="logo-dark" src="https://res.cloudinary.com/dln0ctawv/image/upload/v1786221931/jca-dark_feydzd.png" alt="Grupo JCA">
+      <img class="logo-light" src="https://res.cloudinary.com/dln0ctawv/image/upload/v1786221931/jca-light_ymtxih.png" alt="Grupo JCA">
       <span class="brand-text">Bafômetro <span>JCA</span></span>
     </div>
     <div class="user-chip">
@@ -37,6 +37,7 @@
       <div class="tab" data-panel="painelUsuario">Usuários</div>
       <div class="tab" data-panel="painelOcorrencia">Ocorrências</div>
       <div class="tab" data-panel="painelMedida">Medida Disciplinar</div>
+      <div class="tab" data-panel="painelFiscalizacao">Fiscalização</div>
     </div>
 
     <!-- ===================== CADASTRAR EQUIPAMENTO ===================== -->
@@ -218,7 +219,7 @@
 
         <div class="field">
           <label>Motivo do Fato</label>
-          <textarea id="mdMotivoFato" rows="2" class="ftextarea-plain" required>Reprovado no teste de bafômetro</textarea>
+          <textarea id="mdMotivoFato" rows="2" class="ftextarea-plain" required>Teste positivo para alcoolemia</textarea>
         </div>
 
         <div class="field">
@@ -251,6 +252,31 @@
         <button type="submit" class="btn" id="btnGerarTermo">Gerar Termo (PDF)</button>
       </form>
     </section>
+
+    <!-- ===================== FISCALIZAÇÃO (ESPELHO DE PONTO) ===================== -->
+    <section class="tab-panel" id="painelFiscalizacao" style="display:none;">
+      <form id="formFiscalizacao" class="card">
+        <h2>Espelho de Testes — Fiscalização</h2>
+
+        <div class="field">
+          <label>Matrícula do colaborador</label>
+          <input type="text" id="fiMatricula" placeholder="Ex: 000001" required>
+        </div>
+
+        <div class="field">
+          <label>Período — de</label>
+          <input type="date" id="fiDataInicio" required>
+        </div>
+        <div class="field">
+          <label>Período — até</label>
+          <input type="date" id="fiDataFim" required>
+        </div>
+
+        <p class="hint" style="margin-bottom:14px;">Busca os testes desse colaborador nas 3 regionais (SAO/RIO/SUL), dentro do período selecionado.</p>
+
+        <button type="submit" class="btn" id="btnGerarEspelho">Gerar Espelho (PDF)</button>
+      </form>
+    </section>
   </main>
 
   <!-- ===================== MODAL: DETALHE DO EQUIPAMENTO ===================== -->
@@ -274,5 +300,6 @@
 <script src="js/pwa.js"></script>
 <script type="module" src="js/adm.js"></script>
 <script type="module" src="js/medida.js"></script>
+<script type="module" src="js/fiscalizacao.js"></script>
 </body>
 </html>

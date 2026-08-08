@@ -82,7 +82,7 @@ function salvarRetestesPendentesLS() {
   localStorage.setItem(RETESTE_LS_KEY, JSON.stringify(retestesPendentes));
 }
 
-/** Registra um novo timer de reteste pra esse motorista (chamado quando o resultado é Reprovado) */
+/** Registra um novo timer de reteste pra esse motorista (chamado quando o resultado é Positivo) */
 function iniciarTimerReteste({ base, sheetName, rowIndex, motorista, matricula, empresa }) {
   // Remove qualquer reteste pendente anterior do mesmo motorista (evita duplicar)
   retestesPendentes = retestesPendentes.filter(r => r.matricula !== matricula);
@@ -228,7 +228,7 @@ function renderHistoricoMotorista(registros) {
   } else {
     box.innerHTML = "";
     registros.forEach(reg => {
-      const pass = reg.resultado === "Aprovado";
+      const pass = reg.resultado === "Negativo" || reg.resultado === "Aprovado"; // compatível com registros antigos
       const div = document.createElement("div");
       div.className = "historico-item";
       const reteste = reg.reteste ? ` · reteste: ${reg.reteste}` : "";
@@ -577,20 +577,20 @@ function valorLocalAplicacao() {
 
 /** Valida o padrão 0.00 — um dígito, ponto, dois dígitos */
 function resultadoNumericoValido() {
-  if (resultadoSelecionado === "Aprovado") return true; // preenchido automaticamente com 0.00
+  if (resultadoSelecionado === "Negativo") return true; // preenchido automaticamente com 0.00
   return /^\d\.\d{2}$/.test($("campoResultadoNumerico").value.trim());
 }
 
-/** Mostra/esconde o campo numérico conforme Aprovado ou Reprovado */
+/** Mostra/esconde o campo numérico conforme Negativo ou Positivo */
 function aoTrocarResultado() {
   const bloco = $("blocoResultadoNumerico");
   const campo = $("campoResultadoNumerico");
 
-  if (resultadoSelecionado === "Aprovado") {
+  if (resultadoSelecionado === "Negativo") {
     campo.value = "0.00";
     $("resultadoNumericoErro").textContent = "";
     bloco.classList.add("hidden");
-  } else if (resultadoSelecionado === "Reprovado") {
+  } else if (resultadoSelecionado === "Positivo") {
     campo.value = "";
     bloco.classList.remove("hidden");
   }
@@ -635,7 +635,7 @@ function setupEventos() {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".result-btn").forEach(b => b.classList.remove("selected", "pass", "fail"));
       resultadoSelecionado = btn.dataset.result;
-      btn.classList.add("selected", resultadoSelecionado === "Aprovado" ? "pass" : "fail");
+      btn.classList.add("selected", resultadoSelecionado === "Negativo" ? "pass" : "fail");
       aoTrocarResultado();
       validarFormularioTeste();
     });
@@ -684,6 +684,7 @@ async function registrarTeste(ev) {
   }
 
   // TESTE NORMAL (primeiro teste)
+  const equipSelecionado = EQUIPAMENTOS.find(e => e.serie === $("campoEquipamento").value);
   const teste = {
     dataHora: dataHoraBR(),
     empresa: $("campoEmpresa").value,
@@ -694,7 +695,8 @@ async function registrarTeste(ev) {
     setor: motoristaAtual?.setor || "",
     resultado: resultadoSelecionado,
     resultadoNumerico,
-    equipamentoSerie: $("campoEquipamento").value
+    equipamentoSerie: $("campoEquipamento").value,
+    equipamentoDescricao: equipSelecionado ? `${equipSelecionado.modelo} · Nº ${equipSelecionado.serie}` : $("campoEquipamento").value
   };
 
   let firebaseDocId = null;
@@ -707,12 +709,12 @@ async function registrarTeste(ev) {
   try {
     const resultadoAppend = await Sheets.appendRow(sheetName, [
       teste.dataHora, teste.empresa, teste.aplicador, teste.contrato, teste.motorista,
-      teste.setor, teste.resultado, teste.resultadoNumerico
+      teste.setor, teste.resultado, teste.resultadoNumerico, "", "", teste.equipamentoDescricao
     ]);
     if (firebaseDocId) await FirebaseDB.marcarSincronizado(firebaseDocId).catch(() => {});
 
     // Se reprovado, inicia o timer de 15min de reteste pra esse motorista
-    if (teste.resultado === "Reprovado" && resultadoAppend.rowIndex) {
+    if (teste.resultado === "Positivo" && resultadoAppend.rowIndex) {
       iniciarTimerReteste({
         base, sheetName, rowIndex: resultadoAppend.rowIndex,
         motorista: teste.motorista, matricula: String(motoristaAtual.matricula), empresa: teste.empresa
@@ -735,7 +737,7 @@ async function registrarTeste(ev) {
 
 function mostrarResultadoFinal(teste) {
   const gauge = $("resultGauge");
-  const pass = teste.resultado === "Aprovado";
+  const pass = teste.resultado === "Negativo";
   gauge.className = "result-gauge " + (pass ? "pass" : "fail");
   gauge.querySelector("span").textContent = teste.resultado.toUpperCase();
   $("resultCard").style.display = "block";
