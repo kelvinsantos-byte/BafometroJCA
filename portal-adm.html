@@ -36,6 +36,7 @@
       <div class="tab active" data-panel="painelEquipamento">Equipamentos</div>
       <div class="tab" data-panel="painelUsuario">Usuários</div>
       <div class="tab" data-panel="painelOcorrencia">Ocorrências</div>
+      <div class="tab" data-panel="painelMedida">Medida Disciplinar</div>
     </div>
 
     <!-- ===================== CADASTRAR EQUIPAMENTO ===================== -->
@@ -52,6 +53,13 @@
           <input type="text" id="eqSerie" placeholder="Ex: SN-88231" required>
         </div>
         <div class="field">
+          <label>Garagem</label>
+          <select id="eqGaragem">
+            <option value="">📦 Deixar em estoque (sem garagem por enquanto)</option>
+          </select>
+          <p class="hint">Filial/garagem onde esse equipamento fica disponível. Deixe em branco pra manter em estoque — dá pra vincular a uma garagem depois, a qualquer momento, pelo detalhe do equipamento.</p>
+        </div>
+        <div class="field">
           <label>Aferição</label>
           <input type="date" id="eqAfericao" required>
         </div>
@@ -64,7 +72,16 @@
       </form>
 
       <div class="card">
-        <h2>Equipamentos cadastrados</h2>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;">
+          <h2 style="margin-bottom:0;">Equipamentos cadastrados (estoque)</h2>
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label>Filtrar por garagem</label>
+          <select id="filtroGaragemEstoque">
+            <option value="">Todas as garagens</option>
+            <option value="__ESTOQUE__">📦 Somente em estoque (sem garagem)</option>
+          </select>
+        </div>
         <div id="listaEquipamentos"></div>
       </div>
     </section>
@@ -136,7 +153,116 @@
         <span>Ao escolher "Baixa de Equipamento" o equipamento sai imediatamente da lista de uso. Ao escolher "Manutenção", ele fica bloqueado até um ADM lançar a data de retorno na aba MANUTENÇÃO EQUIPAMENTOS.</span>
       </div>
     </section>
+
+    <!-- ===================== MEDIDA DISCIPLINAR ===================== -->
+    <section class="tab-panel" id="painelMedida" style="display:none;">
+      <form id="formMedida" class="card">
+        <h2>Termo de Medida Disciplinar</h2>
+
+        <div class="field autocomplete-wrap">
+          <label>Funcionário</label>
+          <input id="mdFuncionarioInput" placeholder="Digite o nome ou matrícula…" required autocomplete="off">
+          <div class="autocomplete-list hidden" id="mdFuncionarioSugestoes"></div>
+        </div>
+
+        <div class="field">
+          <label>Matrícula</label>
+          <input type="text" id="mdMatricula" readonly>
+        </div>
+        <div class="field">
+          <label>Empresa</label>
+          <input type="text" id="mdEmpresa" readonly>
+        </div>
+
+        <div class="field">
+          <label>Cargo</label>
+          <select id="mdCargo" required>
+            <option value="">Selecione…</option>
+            <option value="Motorista">Motorista</option>
+            <option value="Instrutor">Instrutor</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Prefixo (se aplicável)</label>
+          <input type="text" id="mdPrefixo" placeholder="Ex: 4521">
+        </div>
+
+        <div class="field">
+          <label>Tipo de Medida</label>
+          <select id="mdTipoMedida" required>
+            <option value="">Selecione…</option>
+            <option value="Instrução de Serviço">Instrução de Serviço</option>
+            <option value="Advertência Verbal">Advertência Verbal</option>
+            <option value="Advertência Escrita">Advertência Escrita</option>
+            <option value="Suspensão de 1 dia">Suspensão de 1 dia</option>
+            <option value="Suspensão de 3 dias">Suspensão de 3 dias</option>
+            <option value="Suspensão de 5 dias">Suspensão de 5 dias</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Duração (se aplicável)</label>
+          <input type="text" id="mdDuracao" placeholder="Preenchido automaticamente pra suspensões">
+        </div>
+
+        <div class="field">
+          <label>Data da Ocorrência</label>
+          <input type="date" id="mdDataOcorrencia" required>
+          <p class="hint">Data do teste de bafômetro que originou a medida.</p>
+        </div>
+        <div class="field">
+          <label>Data da Aplicada</label>
+          <input type="date" id="mdDataAplicada" required>
+        </div>
+
+        <div class="field">
+          <label>Motivo do Fato</label>
+          <textarea id="mdMotivoFato" rows="2" class="ftextarea-plain" required>Reprovado no teste de bafômetro</textarea>
+        </div>
+
+        <div class="field">
+          <label>Resultado do teste (mg/L)</label>
+          <input type="text" id="mdDoseResultado" placeholder="0.03" inputmode="decimal">
+          <p class="hint">Usado pra montar o texto automático das Observações.</p>
+        </div>
+
+        <div class="field">
+          <label>Observações</label>
+          <textarea id="mdObservacoes" rows="3" class="ftextarea-plain"></textarea>
+        </div>
+        <div class="field">
+          <label>Local e Hora</label>
+          <input type="text" id="mdLocalHora" placeholder="Ex: Garagem Barra Funda, 14h30">
+        </div>
+
+        <h2 style="margin-top:6px;">Orientador (Grupo JCA)</h2>
+        <div class="field">
+          <label>Nome</label>
+          <input type="text" id="mdOrientadorNome">
+        </div>
+        <div class="field">
+          <label>Matrícula</label>
+          <input type="text" id="mdOrientadorMatricula">
+        </div>
+
+        <p class="hint" style="margin-bottom:14px;">As testemunhas são preenchidas à mão no termo impresso.</p>
+
+        <button type="submit" class="btn" id="btnGerarTermo">Gerar Termo (PDF)</button>
+      </form>
+    </section>
   </main>
+
+  <!-- ===================== MODAL: DETALHE DO EQUIPAMENTO ===================== -->
+  <div class="modal-bg" id="modalEquipamento">
+    <div class="modal modal-md">
+      <div class="modal-head">
+        <div class="modal-title" id="modalEquipTitle">Equipamento</div>
+        <button class="btn secondary" style="width:auto; padding:6px 12px;" onclick="fecharModalEquipamento()">✕</button>
+      </div>
+      <div class="modal-body" id="modalEquipBody"></div>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
 </div>
@@ -147,5 +273,6 @@
 <script type="module" src="js/firebase-init.js"></script>
 <script src="js/pwa.js"></script>
 <script type="module" src="js/adm.js"></script>
+<script type="module" src="js/medida.js"></script>
 </body>
 </html>

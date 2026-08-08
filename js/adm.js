@@ -6,7 +6,9 @@
  */
 
 let PERFIL = null;
-let EQUIPAMENTOS = []; // [{rowIndex, modelo, serie, afericao, validade, status}]
+let EQUIPAMENTOS = []; // [{rowIndex, modelo, serie, afericao, validade, status, garagem}]
+let MANUTENCOES = [];  // [{rowIndex, modelo, serie, dataEnvio, dataRetorno, motivo, baixa, registradoPor}]
+let GARAGENS = [];     // [{empresa, garagem}]
 const $ = (id) => document.getElementById(id);
 
 function toast(msg) {
@@ -29,6 +31,12 @@ function parseDataEquipamento(str) {
   const br = String(str).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (br) return new Date(+br[3], +br[2] - 1, +br[1], 23, 59, 59);
   return null;
+}
+
+function formatarData(str) {
+  const d = parseDataEquipamento(str);
+  if (!d) return str || "—";
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 }
 
 function aplicarLogoEmpresa(empresa) {
@@ -62,6 +70,7 @@ async function boot() {
 
   setupTabs();
   setupEventos();
+  await carregarGaragens();
   await Promise.all([carregarEquipamentos(), carregarUsuarios()]);
 
   if (Sheets.isMockMode()) {
@@ -89,9 +98,32 @@ function setupEventos() {
     const isManutencao = e.target.value === "Manutenção";
     $("blocoMotivoManutencao").style.display = isManutencao ? "block" : "none";
   });
+  $("filtroGaragemEstoque").addEventListener("change", renderListaEquipamentos);
   $("btnSair").addEventListener("click", async () => {
     await Auth.signOut();
     window.location.href = "index.html";
+  });
+}
+
+async function carregarGaragens() {
+  const rows = await Sheets.getValues(`${APP_CONFIG.sheets.recepcaoAtiva}!A2:B`);
+  GARAGENS = rows
+    .map(r => ({ empresa: r[0] || "", garagem: r[1] || "" }))
+    .filter(g => g.garagem && g.empresa === PERFIL.empresa); // só as garagens da empresa desse ADM
+
+  const eqSelect = $("eqGaragem");
+  const filtroSelect = $("filtroGaragemEstoque");
+  eqSelect.innerHTML = '<option value="">Selecione a garagem…</option>';
+  GARAGENS.forEach(g => {
+    const opt = document.createElement("option");
+    opt.value = g.garagem;
+    opt.textContent = `${g.garagem} (${g.empresa})`;
+    eqSelect.appendChild(opt);
+
+    const opt2 = document.createElement("option");
+    opt2.value = g.garagem;
+    opt2.textContent = `${g.garagem} (${g.empresa})`;
+    filtroSelect.appendChild(opt2);
   });
 }
 
@@ -101,26 +133,39 @@ function setupEventos() {
 
 async function cadastrarEquipamento(ev) {
   ev.preventDefault();
-  const btn = $("btnCadastrarEquip");
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Salvando…';
 
   const equipamento = {
     modelo: $("eqModelo").value.trim(),
     serie: $("eqSerie").value.trim(),
+    garagem: $("eqGaragem").value,
     afericao: $("eqAfericao").value,
     validade: $("eqValidade").value
   };
 
+  const jaExiste = EQUIPAMENTOS.some(
+    e => e.serie.trim().toLowerCase() === equipamento.serie.toLowerCase()
+  );
+  if (jaExiste) {
+    toast(`Já existe um equipamento cadastrado com o número de série "${equipamento.serie}". Use um número diferente.`);
+    $("eqSerie").focus();
+    return;
+  }
+
+  const btn = $("btnCadastrarEquip");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Salvando…';
+
   try {
     await FirebaseDB.salvarEquipamento(equipamento).catch(e => console.warn("Firebase:", e));
+    // A Modelo | B Nº Série | C Aferição | D Validade | E Status | F Data de Baixa | G Garagem | H Empresa
     await Sheets.appendRow(APP_CONFIG.sheets.equipamentos, [
-      equipamento.modelo, equipamento.serie, equipamento.afericao, equipamento.validade, "Ativo", ""
+      equipamento.modelo, equipamento.serie, equipamento.afericao, equipamento.validade, "Ativo", "", equipamento.garagem, PERFIL.empresa
     ]);
     toast("Equipamento cadastrado com sucesso.");
     $("formEquipamento").reset();
     await carregarEquipamentos();
   } catch (e) {
+    if (Sheets.tratarErroSessao(e)) return;
     toast("Erro ao cadastrar equipamento: " + e.message);
   } finally {
     btn.disabled = false;
@@ -129,43 +174,91 @@ async function cadastrarEquipamento(ev) {
 }
 
 async function carregarEquipamentos() {
-  const rows = await Sheets.getValues(`${APP_CONFIG.sheets.equipamentos}!A2:F`);
+  const [equipRows, manutRows] = await Promise.all([
+    Sheets.getValues(`${APP_CONFIG.sheets.equipamentos}!A2:H`),
+    Sheets.getValues(`${APP_CONFIG.sheets.manutencaoEquipamentos}!A2:G`)
+  ]);
 
-  EQUIPAMENTOS = rows.map((r, i) => ({
-    rowIndex: i + 2, // linha real na planilha (cabeçalho ocupa a linha 1)
-    modelo: r[0], serie: r[1], afericao: r[2], validade: r[3],
-    status: r[4] || "Ativo", dataBaixa: r[5] || ""
+  // A Modelo | B Nº Série | C Data de Envio | D Data de Retorno | E Motivo Manutenção | F Baixa | G Registrado por
+  MANUTENCOES = manutRows.map((r, i) => ({
+    rowIndex: i + 2,
+    modelo: r[0], serie: r[1], dataEnvio: r[2], dataRetorno: r[3],
+    motivo: r[4], baixa: r[5], registradoPor: r[6]
   }));
 
-  const list = $("listaEquipamentos");
-  list.innerHTML = "";
-  if (!rows.length) {
-    list.innerHTML = '<div class="empty-state">Nenhum equipamento cadastrado ainda.</div>';
-  } else {
-    rows.slice().reverse().forEach(r => {
-      const [modelo, serie, afericao, validade, status] = r;
-      const vencido = validade && parseDataEquipamento(validade) && parseDataEquipamento(validade) < new Date();
-      const pillClass = status === "Baixado" ? "error" : vencido ? "warn" : "ok";
-      const pillText = status === "Baixado" ? "Baixado" : vencido ? "Vencido" : "Ativo";
-      const row = document.createElement("div");
-      row.className = "list-row";
-      row.innerHTML = `
-        <div>
-          <div>${modelo}</div>
-          <div class="muted mono">Nº ${serie} · válido até ${validade || "—"}</div>
-        </div>
-        <span class="pill ${pillClass}">${pillText}</span>`;
-      list.appendChild(row);
-    });
-  }
+  // A Modelo | B Nº Série | C Aferição | D Validade | E Status | F Data de Baixa | G Garagem | H Empresa
+  // Só entram equipamentos da MESMA empresa do ADM logado — isolamento por domínio.
+  EQUIPAMENTOS = equipRows
+    .map((r, i) => ({
+      rowIndex: i + 2, // linha real na planilha (cabeçalho ocupa a linha 1)
+      modelo: r[0], serie: r[1], afericao: r[2], validade: r[3],
+      status: r[4] || "Ativo", dataBaixa: r[5] || "", garagem: r[6] || "", empresa: r[7] || ""
+    }))
+    .filter(e => e.empresa === PERFIL.empresa);
+
+  renderListaEquipamentos();
 
   const ocorrenciaSelect = $("campoEquipamentoOcorrencia");
   ocorrenciaSelect.innerHTML = '<option value="">Selecione o equipamento…</option>';
-  EQUIPAMENTOS.filter(e => e.status !== "Baixado").forEach(e => {
-    const opt = document.createElement("option");
-    opt.value = e.serie;
-    opt.textContent = `${e.modelo} · Nº série ${e.serie}`;
-    ocorrenciaSelect.appendChild(opt);
+  EQUIPAMENTOS
+    .filter(e => e.status !== "Baixado" && !manutencaoAbertaDoEquipamento(e.serie))
+    .forEach(e => {
+      const opt = document.createElement("option");
+      opt.value = e.serie;
+      opt.textContent = `${e.modelo} · Nº série ${e.serie}`;
+      ocorrenciaSelect.appendChild(opt);
+    });
+}
+
+/** Só conta como "manutenção aberta" se a linha for de fato um registro de
+ *  manutenção (tem motivo preenchido) sem data de retorno — isso evita
+ *  confundir com linhas de "Baixa" (que não têm motivo/retorno mesmo). */
+function manutencaoAbertaDoEquipamento(serie) {
+  return MANUTENCOES.find(m =>
+    m.serie === serie && m.motivo && (!m.dataRetorno || m.dataRetorno.trim() === "")
+  );
+}
+
+function situacaoEquipamento(equip) {
+  if (equip.status === "Baixado") return { classe: "error", texto: "Baixado" };
+  if (manutencaoAbertaDoEquipamento(equip.serie)) return { classe: "warn", texto: "Em Manutenção" };
+  const vencido = equip.validade && parseDataEquipamento(equip.validade) && parseDataEquipamento(equip.validade) < new Date();
+  if (vencido) return { classe: "warn", texto: "Vencido" };
+  return { classe: "ok", texto: "Ativo" };
+}
+
+function renderListaEquipamentos() {
+  const filtroGaragem = $("filtroGaragemEstoque").value;
+  const list = $("listaEquipamentos");
+  list.innerHTML = "";
+
+  const equipamentosFiltrados = EQUIPAMENTOS
+    .filter(e => {
+      if (!filtroGaragem) return true;
+      if (filtroGaragem === "__ESTOQUE__") return !e.garagem;
+      return e.garagem === filtroGaragem;
+    })
+    .slice().reverse();
+
+  if (!equipamentosFiltrados.length) {
+    list.innerHTML = '<div class="empty-state">Nenhum equipamento encontrado com esse filtro.</div>';
+    return;
+  }
+
+  equipamentosFiltrados.forEach(equip => {
+    const sit = situacaoEquipamento(equip);
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.style.cursor = "pointer";
+    row.innerHTML = `
+      <div>
+        <div>${equip.modelo}</div>
+        <div class="muted mono">Nº ${equip.serie} · válido até ${equip.validade || "—"}</div>
+        <div class="muted" style="font-size:11px;">${equip.garagem ? "📍 " + equip.garagem : "📦 Em estoque (sem garagem)"}</div>
+      </div>
+      <span class="pill ${sit.classe}">${sit.texto}</span>`;
+    row.addEventListener("click", () => abrirModalEquipamento(equip.serie));
+    list.appendChild(row);
   });
 }
 
@@ -186,13 +279,19 @@ async function registrarOcorrencia(ev) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Enviando…';
 
+  // Colunas da aba MANUTENÇÃO EQUIPAMENTOS:
+  // A Modelo | B Nº Série | C Data de Envio | D Data de Retorno | E Motivo Manutenção | F Baixa | G Registrado por
   try {
     if (motivo === "Baixa de Equipamento") {
-      // Atualiza colunas E (Status) e F (Data de Baixa) da linha do equipamento
+      // Atualiza colunas E (Status) e F (Data de Baixa) da linha do equipamento em CONTROLE DE EQUIPAMENTOS
       await Sheets.updateRange(
         `${APP_CONFIG.sheets.equipamentos}!E${equip.rowIndex}:F${equip.rowIndex}`,
         ["Baixado", hojeISO()]
       );
+      // Registra também na aba MANUTENÇÃO EQUIPAMENTOS, como histórico unificado
+      await Sheets.appendRow(APP_CONFIG.sheets.manutencaoEquipamentos, [
+        equip.modelo, serie, "", "", "", hojeISO(), PERFIL.nome
+      ]);
       await FirebaseDB.salvarOcorrenciaEquipamento({
         serie, tipo: "Baixa", registradoPor: PERFIL.nome, dataBaixa: hojeISO()
       }).catch(() => {});
@@ -200,7 +299,7 @@ async function registrarOcorrencia(ev) {
     } else {
       const motivoManutencao = $("campoMotivoManutencao").value;
       await Sheets.appendRow(APP_CONFIG.sheets.manutencaoEquipamentos, [
-        serie, hojeISO(), motivoManutencao, "", PERFIL.nome
+        equip.modelo, serie, hojeISO(), "", motivoManutencao, "", PERFIL.nome
       ]);
       await FirebaseDB.salvarOcorrenciaEquipamento({
         serie, tipo: "Manutenção", motivo: motivoManutencao, registradoPor: PERFIL.nome, dataEnvio: hojeISO()
@@ -211,12 +310,173 @@ async function registrarOcorrencia(ev) {
     $("formOcorrencia").reset();
     $("blocoMotivoManutencao").style.display = "none";
   } catch (e) {
+    if (Sheets.tratarErroSessao(e)) return;
     toast("Erro ao registrar ocorrência: " + e.message);
   } finally {
     btn.disabled = false;
     btn.textContent = "Registrar Ocorrência";
   }
 }
+
+/* ---------------------------------------------------------- */
+/* MODAL: DETALHE DO EQUIPAMENTO / RETORNO DE MANUTENÇÃO         */
+/* ---------------------------------------------------------- */
+
+function abrirModalEquipamento(serie) {
+  const equip = EQUIPAMENTOS.find(e => e.serie === serie);
+  if (!equip) return;
+
+  const sit = situacaoEquipamento(equip);
+  const manutAberta = manutencaoAbertaDoEquipamento(serie);
+  const historico = MANUTENCOES.filter(m => m.serie === serie).slice().reverse();
+
+  $("modalEquipTitle").textContent = `${equip.modelo} · Nº ${equip.serie}`;
+
+  let html = `
+    <div class="detalhe-linha"><span class="label">Status</span><span class="valor"><span class="pill ${sit.classe}">${sit.texto}</span></span></div>
+    <div class="detalhe-linha"><span class="label">Garagem</span><span class="valor">${equip.garagem || "—"}</span></div>
+    <div class="detalhe-linha"><span class="label">Aferição atual</span><span class="valor">${formatarData(equip.afericao)}</span></div>
+    <div class="detalhe-linha"><span class="label">Validade atual</span><span class="valor">${formatarData(equip.validade)}</span></div>
+  `;
+
+  if (equip.status === "Baixado") {
+    html += `<div class="detalhe-linha"><span class="label">Data de baixa</span><span class="valor">${formatarData(equip.dataBaixa)}</span></div>`;
+  }
+
+  if (equip.status !== "Baixado") {
+    html += `
+      <h2 style="margin-top:6px;">${equip.garagem ? "Transferir para outra garagem" : "Vincular a uma garagem"}</h2>
+      <div class="field">
+        <label>Garagem</label>
+        <select id="modalGaragemSelecionada">
+          <option value="">📦 Deixar em estoque (sem garagem)</option>
+        </select>
+      </div>
+      <button type="button" class="btn secondary" id="btnSalvarGaragem">Salvar Garagem</button>
+    `;
+  }
+
+  html += `<h2 style="margin-top:6px;">Histórico de ocorrências</h2>`;
+  if (!historico.length) {
+    html += `<div class="empty-state">Nenhuma ocorrência registrada pra esse equipamento.</div>`;
+  } else {
+    historico.forEach(m => {
+      if (m.baixa) {
+        html += `
+          <div class="detalhe-linha" style="flex-direction:column; align-items:flex-start; gap:3px;">
+            <span class="valor" style="text-align:left;">Baixa de equipamento — ${formatarData(m.baixa)}</span>
+            <span class="label" style="font-size:0.75rem;">Por: ${m.registradoPor || "—"}</span>
+          </div>`;
+      } else {
+        const aberta = !m.dataRetorno || m.dataRetorno.trim() === "";
+        html += `
+          <div class="detalhe-linha" style="flex-direction:column; align-items:flex-start; gap:3px;">
+            <span class="valor" style="text-align:left;">${m.motivo} — enviado em ${formatarData(m.dataEnvio)}</span>
+            <span class="label" style="font-size:0.75rem;">Por: ${m.registradoPor || "—"} · ${aberta ? "ainda em aberto" : "retornou em " + formatarData(m.dataRetorno)}</span>
+          </div>`;
+      }
+    });
+  }
+
+  if (manutAberta) {
+    html += `
+      <h2 style="margin-top:10px;">Registrar retorno do equipamento</h2>
+      <div class="field">
+        <label>Nova aferição</label>
+        <input type="date" id="retornoAfericao" required>
+      </div>
+      <div class="field">
+        <label>Nova validade</label>
+        <input type="date" id="retornoValidade" required>
+      </div>
+      <button type="button" class="btn" id="btnConfirmarRetorno">Confirmar Retorno</button>
+    `;
+  }
+
+  $("modalEquipBody").innerHTML = html;
+  $("modalEquipamento").classList.add("open");
+
+  if (manutAberta) {
+    $("btnConfirmarRetorno").addEventListener("click", () => registrarRetornoEquipamento(equip, manutAberta));
+  }
+
+  if (equip.status !== "Baixado") {
+    const garagemSelect = $("modalGaragemSelecionada");
+    GARAGENS.forEach(g => {
+      const opt = document.createElement("option");
+      opt.value = g.garagem;
+      opt.textContent = `${g.garagem} (${g.empresa})`;
+      if (g.garagem === equip.garagem) opt.selected = true;
+      garagemSelect.appendChild(opt);
+    });
+    $("btnSalvarGaragem").addEventListener("click", () => salvarGaragemEquipamento(equip));
+  }
+}
+
+async function salvarGaragemEquipamento(equip) {
+  const novaGaragem = $("modalGaragemSelecionada").value;
+  const btn = $("btnSalvarGaragem");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Salvando…';
+
+  try {
+    // Atualiza coluna G (Garagem) da linha do equipamento
+    await Sheets.updateRange(
+      `${APP_CONFIG.sheets.equipamentos}!G${equip.rowIndex}`,
+      [novaGaragem]
+    );
+    toast(novaGaragem
+      ? `Equipamento ${equip.serie} vinculado à garagem ${novaGaragem}.`
+      : `Equipamento ${equip.serie} movido para o estoque.`);
+    fecharModalEquipamento();
+    await carregarEquipamentos();
+  } catch (e) {
+    if (Sheets.tratarErroSessao(e)) return;
+    toast("Erro ao salvar a garagem: " + e.message);
+    btn.disabled = false;
+    btn.textContent = "Salvar Garagem";
+  }
+}
+
+function fecharModalEquipamento() {
+  $("modalEquipamento").classList.remove("open");
+}
+
+async function registrarRetornoEquipamento(equip, manutencao) {
+  const novaAfericao = $("retornoAfericao").value;
+  const novaValidade = $("retornoValidade").value;
+  if (!novaAfericao || !novaValidade) {
+    toast("Preencha as duas datas pra confirmar o retorno.");
+    return;
+  }
+
+  const btn = $("btnConfirmarRetorno");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Confirmando…';
+
+  try {
+    // Atualiza colunas C (Aferição) e D (Validade) da linha do equipamento
+    await Sheets.updateRange(
+      `${APP_CONFIG.sheets.equipamentos}!C${equip.rowIndex}:D${equip.rowIndex}`,
+      [novaAfericao, novaValidade]
+    );
+    // Fecha o registro de manutenção, preenchendo a Data de Retorno (coluna D)
+    await Sheets.updateRange(
+      `${APP_CONFIG.sheets.manutencaoEquipamentos}!D${manutencao.rowIndex}`,
+      [hojeISO()]
+    );
+    toast(`Equipamento ${equip.serie} disponível novamente para a operação.`);
+    fecharModalEquipamento();
+    await carregarEquipamentos();
+  } catch (e) {
+    if (Sheets.tratarErroSessao(e)) return;
+    toast("Erro ao registrar o retorno: " + e.message);
+    btn.disabled = false;
+    btn.textContent = "Confirmar Retorno";
+  }
+}
+
+window.fecharModalEquipamento = fecharModalEquipamento;
 
 /* ---------------------------------------------------------- */
 /* CADASTRAR USUÁRIO -> aba OPERAÇÃO / TRÁFEGO                  */
@@ -252,6 +512,7 @@ async function cadastrarUsuario(ev) {
     $("formUsuario").reset();
     await carregarUsuarios();
   } catch (e) {
+    if (Sheets.tratarErroSessao(e)) return;
     toast("Erro ao cadastrar usuário: " + e.message);
   } finally {
     btn.disabled = false;

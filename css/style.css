@@ -167,10 +167,10 @@ main { flex: 1; padding: 20px 18px; max-width: 640px; width: 100%; margin: 0 aut
 /* Troca automática de logo conforme o tema: .logo-dark aparece no tema
    escuro (padrão) e .logo-light aparece no tema claro. Logos que servem
    para os dois temas (sem essas classes) ficam sempre visíveis. */
-.logo-light { display: none; }
-.logo-dark { display: inline-block; }
-[data-theme="light"] .logo-dark { display: none; }
-[data-theme="light"] .logo-light { display: inline-block; }
+.logo-light { display: none !important; }
+.logo-dark { display: inline-block !important; }
+[data-theme="light"] .logo-dark { display: none !important; }
+[data-theme="light"] .logo-light { display: inline-block !important; }
 
 .login-footer {
   padding: 22px 18px 26px;
@@ -178,7 +178,7 @@ main { flex: 1; padding: 20px 18px; max-width: 640px; width: 100%; margin: 0 aut
 }
 .partner-logos {
   display: flex; align-items: center; justify-content: center;
-  flex-wrap: wrap; gap: 14px;
+  flex-wrap: wrap; gap: 8px;
   padding-bottom: 12px;
 }
 /* Caixa de tamanho fixo com a logo como background-image: o tamanho da
@@ -274,11 +274,11 @@ main { flex: 1; padding: 20px 18px; max-width: 640px; width: 100%; margin: 0 aut
 .btn.danger:hover { background: var(--red); color: #fff; }
 
 .tabs {
-  display: flex; gap: 4px; margin-bottom: 18px;
+  display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 18px;
   border-bottom: 1px solid var(--bor);
 }
 .tab {
-  flex: 1; text-align: center; padding: 11px 6px;
+  flex: 1; min-width: 110px; text-align: center; padding: 11px 6px;
   font-family: var(--fd); font-weight: 600; font-size: 0.82rem;
   letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--tx3); cursor: pointer; user-select: none;
@@ -494,3 +494,56 @@ main { flex: 1; padding: 20px 18px; max-width: 640px; width: 100%; margin: 0 aut
 .historico-item:last-child { border-bottom: none; }
 .historico-item .data { color: var(--tx3); font-family: var(--fm); font-size: 0.72rem; }
 .historico-empty { font-size: 0.8rem; color: var(--tx3); padding: 6px 0; }
+
+/* -------------------- modal (detalhe de equipamento) -------------------- */
+
+.modal-bg {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 500;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-bg.open { display: flex; }
+
+.modal {
+  background: var(--sur);
+  border: 1px solid var(--bor);
+  border-radius: var(--r16);
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-md { max-width: 520px; }
+
+.modal-head {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--bor);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title {
+  font-family: var(--fd); font-size: 1.15rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+.detalhe-linha {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 7px 0; border-bottom: 1px solid var(--sur3);
+  font-size: 0.87rem;
+}
+.detalhe-linha:last-child { border-bottom: none; }
+.detalhe-linha .label { color: var(--tx3); }
+.detalhe-linha .valor { color: var(--tx); font-family: var(--fm); text-align: right; }
+
+/* -------------------- textarea (Medida Disciplinar) -------------------- */
+
+.field textarea, .ftextarea-plain {
+  width: 100%;
+  background: var(--sur2); border: 1px solid var(--bor); color: var(--tx);
+  border-radius: var(--r8); padding: 12px 12px; font-size: 0.9rem;
+  font-family: var(--fb); resize: vertical; min-height: 70px;
+  transition: border-color var(--tr), box-shadow var(--tr); outline: none;
+}
+.field textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-glow); }

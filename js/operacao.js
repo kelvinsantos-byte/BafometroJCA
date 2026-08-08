@@ -265,6 +265,9 @@ async function boot() {
   renderRetestes();
   setInterval(tickRetestes, 1000);
 
+  // Atualiza a lista de equipamentos sozinha a cada 30s, sem precisar recarregar a página
+  setInterval(() => atualizarEquipamentosAgora(false), 30000);
+
   if (Sheets.isMockMode()) {
     toast("Modo de teste ativo — os dados ficam salvos só neste navegador.");
   }
@@ -361,6 +364,7 @@ function aoTrocarEmpresa() {
   $("campoContrato").innerHTML = '<option value="">Selecione o contrato…</option>';
   $("campoGaragem").innerHTML = '<option value="">Selecione a garagem…</option>';
   if (empresa) carregarContratosEGaragens(empresa);
+  atualizarListaEquipamentosDisponiveis();
   validarFormularioTeste();
 }
 
@@ -395,25 +399,54 @@ async function carregarContratosEGaragens(empresa) {
 
 async function carregarEquipamentos() {
   const [equipRows, manutRows] = await Promise.all([
-    Sheets.getValues(`${APP_CONFIG.sheets.equipamentos}!A2:F`),
-    Sheets.getValues(`${APP_CONFIG.sheets.manutencaoEquipamentos}!A2:E`)
+    Sheets.getValues(`${APP_CONFIG.sheets.equipamentos}!A2:G`),
+    Sheets.getValues(`${APP_CONFIG.sheets.manutencaoEquipamentos}!A2:G`)
   ]);
 
+  // A Modelo | B Nº Série | C Data de Envio | D Data de Retorno | E Motivo Manutenção | F Baixa | G Registrado por
   MANUTENCOES = manutRows.map(r => ({
-    serie: r[0], dataEnvio: r[1], motivo: r[2], dataRetorno: r[3], registradoPor: r[4]
+    serie: r[1], dataEnvio: r[2], dataRetorno: r[3], motivo: r[4], baixa: r[5], registradoPor: r[6]
   }));
 
   EQUIPAMENTOS = equipRows.map((r, i) => ({
     rowIndex: i + 2, // linha real na planilha (cabeçalho ocupa a linha 1)
     modelo: r[0], serie: r[1], afericao: r[2], validade: r[3],
-    status: r[4] || "Ativo", dataBaixa: r[5] || ""
+    status: r[4] || "Ativo", dataBaixa: r[5] || "", garagem: r[6] || ""
   }));
 
-  preencherSelectEquipamentos("campoEquipamento", EQUIPAMENTOS);
+  atualizarListaEquipamentosDisponiveis();
+}
+
+/** Equipamentos que a operação pode de fato usar: nem baixados, nem em
+ *  manutenção aberta. Se uma garagem específica estiver selecionada
+ *  (Local de Aplicação = Garagem), filtra só o equipamento daquela garagem. */
+function equipamentosDisponiveis() {
+  const tipo = $("campoLocalTipo") ? $("campoLocalTipo").value : "";
+  const garagemSelecionada = $("campoGaragem") ? $("campoGaragem").value : "";
+
+  return EQUIPAMENTOS.filter(e => {
+    if (e.status === "Baixado") return false;
+    // Só conta como manutenção aberta se a linha tiver motivo preenchido
+    // (evita confundir com linhas que são só registro de "Baixa")
+    const manutAberta = MANUTENCOES.find(m =>
+      m.serie === e.serie && m.motivo && (!m.dataRetorno || m.dataRetorno.trim() === "")
+    );
+    if (manutAberta) return false;
+    if (tipo === "GARAGEM" && garagemSelecionada) {
+      return e.garagem === garagemSelecionada;
+    }
+    return true;
+  });
+}
+
+function atualizarListaEquipamentosDisponiveis() {
+  preencherSelectEquipamentos("campoEquipamento", equipamentosDisponiveis());
 }
 
 function preencherSelectEquipamentos(selectId, lista) {
   const select = $(selectId);
+  const valorAnterior = select.value;
+
   select.innerHTML = '<option value="">Selecione o equipamento…</option>';
   lista.forEach(e => {
     const opt = document.createElement("option");
@@ -421,6 +454,39 @@ function preencherSelectEquipamentos(selectId, lista) {
     opt.textContent = `${e.modelo} · Nº série ${e.serie}`;
     select.appendChild(opt);
   });
+
+  if (valorAnterior) {
+    const aindaDisponivel = lista.some(e => e.serie === valorAnterior);
+    if (aindaDisponivel) {
+      select.value = valorAnterior;
+    } else {
+      toast("O equipamento selecionado não está mais disponível — escolha outro.");
+      atualizarBannerEquipamento();
+      validarFormularioTeste();
+    }
+  }
+}
+
+/** Busca de novo os dados de equipamentos/manutenção no Sheets — usado tanto
+ *  pelo botão manual quanto pela atualização automática periódica. */
+async function atualizarEquipamentosAgora(manual) {
+  const btn = $("btnAtualizarEquipamentos");
+  const status = $("equipamentosAtualizadoEm");
+  if (manual && btn) { btn.disabled = true; btn.textContent = "…"; }
+
+  try {
+    await carregarEquipamentos();
+    if (status) {
+      const agora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      status.textContent = `Lista atualizada às ${agora}.`;
+    }
+    if (manual) toast("Lista de equipamentos atualizada.");
+  } catch (e) {
+    if (Sheets.tratarErroSessao(e)) return;
+    if (manual) toast("Não foi possível atualizar a lista: " + e.message);
+  } finally {
+    if (manual && btn) { btn.disabled = false; btn.textContent = "↻"; }
+  }
 }
 
 /* ---------------------------------------------------------- */
@@ -443,7 +509,7 @@ function statusDoEquipamento(serie) {
   }
 
   const manutencaoAberta = MANUTENCOES.find(
-    m => m.serie === serie && (!m.dataRetorno || m.dataRetorno.trim() === "")
+    m => m.serie === serie && m.motivo && (!m.dataRetorno || m.dataRetorno.trim() === "")
   );
   if (manutencaoAberta) {
     return {
@@ -492,6 +558,12 @@ function aoTrocarLocalTipo() {
   const tipo = $("campoLocalTipo").value;
   $("blocoContrato").classList.toggle("hidden", tipo !== "CONTRATO");
   $("blocoGaragem").classList.toggle("hidden", tipo !== "GARAGEM");
+  atualizarListaEquipamentosDisponiveis();
+  validarFormularioTeste();
+}
+
+function aoTrocarGaragem() {
+  atualizarListaEquipamentosDisponiveis();
   validarFormularioTeste();
 }
 
@@ -544,9 +616,10 @@ function validarFormularioTeste() {
 }
 
 function setupEventos() {
-  ["campoBase", "campoContrato", "campoGaragem"].forEach(id => {
+  ["campoBase", "campoContrato"].forEach(id => {
     $(id).addEventListener("change", validarFormularioTeste);
   });
+  $("campoGaragem").addEventListener("change", aoTrocarGaragem);
   $("campoLocalTipo").addEventListener("change", aoTrocarLocalTipo);
   $("campoMotorista").addEventListener("input", aoDigitarMotorista);
   $("campoMotorista").addEventListener("blur", () => {
@@ -555,6 +628,7 @@ function setupEventos() {
   });
   $("campoEmpresa").addEventListener("change", aoTrocarEmpresa);
   $("campoEquipamento").addEventListener("change", atualizarBannerEquipamento);
+  $("btnAtualizarEquipamentos").addEventListener("click", () => atualizarEquipamentosAgora(true));
   $("campoResultadoNumerico").addEventListener("input", aoDigitarResultadoNumerico);
 
   document.querySelectorAll(".result-btn").forEach(btn => {
@@ -600,6 +674,7 @@ async function registrarTeste(ev) {
       mostrarResultadoFinal({ resultado: resultadoSelecionado, motorista: $("campoMotorista").value.trim(), dataHora: dataHoraBR() });
       resetarFormularioTeste();
     } catch (e) {
+      if (Sheets.tratarErroSessao(e)) return;
       toast("Erro ao registrar o reteste: " + e.message);
     } finally {
       btn.disabled = false;
@@ -650,6 +725,7 @@ async function registrarTeste(ev) {
     mostrarResultadoFinal(teste);
     resetarFormularioTeste();
   } catch (e) {
+    if (Sheets.tratarErroSessao(e)) return;
     toast("Teste salvo localmente, mas houve erro ao gravar na planilha: " + e.message);
   } finally {
     btn.disabled = false;

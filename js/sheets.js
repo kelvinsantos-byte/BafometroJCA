@@ -53,6 +53,11 @@ const Sheets = (() => {
   async function handle(resp) {
     if (!resp.ok) {
       const body = await resp.json().catch(() => ({}));
+      if (resp.status === 401) {
+        const err = new Error("Sua sessão expirou. Faça login novamente.");
+        err.isAuthExpired = true;
+        throw err;
+      }
       throw new Error(body?.error?.message || `Erro na Sheets API (HTTP ${resp.status})`);
     }
     return resp.json();
@@ -145,5 +150,30 @@ const Sheets = (() => {
     return handle(resp);
   }
 
-  return { getValues, appendRow, updateRange, isMockMode: () => MOCK_MODE };
+  return { getValues, appendRow, updateRange, isMockMode: () => MOCK_MODE, tratarErroSessao };
 })();
+
+/** Se o erro for de sessão expirada, já redireciona pro login e devolve true
+ *  (pra quem chamou saber que deve parar ali, sem mostrar outro erro em cima). */
+function tratarErroSessao(e) {
+  if (e && e.isAuthExpired) {
+    alert("Sua sessão expirou. Você será levado de volta pra tela de login.");
+    sessionStorage.clear();
+    window.location.href = "index.html";
+    return true;
+  }
+  return false;
+}
+
+/** Captura globalmente qualquer erro de "sessão expirada" (token do Google
+ *  vencido, ~1h de validade) vindo de qualquer parte do app — inclusive de
+ *  atualizações automáticas em segundo plano — e já leva a pessoa de volta
+ *  pro login, em vez de deixar a tela travada com um erro técnico confuso. */
+window.addEventListener("unhandledrejection", (event) => {
+  if (event.reason && event.reason.isAuthExpired) {
+    event.preventDefault();
+    alert("Sua sessão expirou. Você será levado de volta pra tela de login.");
+    sessionStorage.clear();
+    window.location.href = "index.html";
+  }
+});
