@@ -51,6 +51,17 @@ function aplicarLogoEmpresa(empresa) {
   }
 }
 
+function aplicarAvatarGoogle() {
+  const usuario = Auth.getCurrentUser();
+  const img = $("userAvatar");
+  if (usuario?.picture && img) {
+    img.alt = usuario.name || "";
+    img.onerror = () => { img.style.display = "none"; };
+    img.src = usuario.picture;
+    img.style.display = "block";
+  }
+}
+
 async function boot() {
   const raw = sessionStorage.getItem("baf_perfil");
   if (!raw) { window.location.href = "index.html"; return; }
@@ -67,6 +78,7 @@ async function boot() {
   $("userName").textContent = PERFIL.nome;
   $("userEmpresa").textContent = PERFIL.empresa;
   aplicarLogoEmpresa(PERFIL.empresa);
+  aplicarAvatarGoogle();
 
   setupTabs();
   setupEventos();

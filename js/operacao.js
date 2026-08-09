@@ -10,9 +10,9 @@ let EQUIPAMENTOS = []; // [{rowIndex, modelo, serie, afericao, validade, status}
 let MANUTENCOES = [];  // registros da aba MANUTENÇÃO EQUIPAMENTOS
 let motoristaAtual = null; // registro completo do motorista escolhido ({matricula, nome, empresa, setor})
 let resultadoSelecionado = null;
-let retestesPendentes = []; // [{id, base, sheetName, rowIndex, motorista, matricula, empresa, expiraEm, notificado}]
+let retestesPendentes = []; // [{id, dia, motorista, matricula, empresa, tentativa, expiraEm, notificado, contraprova}]
 
-const RETESTE_MINUTOS = 15;
+const RETESTE_MINUTOS = 5;
 const RETESTE_LS_KEY = "baf_retestes_pendentes";
 
 const $ = (id) => document.getElementById(id);
@@ -65,8 +65,19 @@ function aplicarLogoEmpresa(empresa) {
   }
 }
 
+function aplicarAvatarGoogle() {
+  const usuario = Auth.getCurrentUser();
+  const img = $("userAvatar");
+  if (usuario?.picture && img) {
+    img.alt = usuario.name || "";
+    img.onerror = () => { img.style.display = "none"; };
+    img.src = usuario.picture;
+    img.style.display = "block";
+  }
+}
+
 /* ---------------------------------------------------------- */
-/* RETESTES PENDENTES (timer de 15min por motorista)            */
+/* RETESTES PENDENTES (timer de 5min, até 3 tentativas/dia)      */
 /* ---------------------------------------------------------- */
 
 function carregarRetestesPendentesLS() {
@@ -76,27 +87,51 @@ function carregarRetestesPendentesLS() {
   } catch (e) {
     retestesPendentes = [];
   }
+  // Descarta pendências de dias anteriores — o contador de tentativas é por dia
+  const hoje = hojeISO();
+  retestesPendentes = retestesPendentes.filter(r => r.dia === hoje);
+  salvarRetestesPendentesLS();
 }
 
 function salvarRetestesPendentesLS() {
   localStorage.setItem(RETESTE_LS_KEY, JSON.stringify(retestesPendentes));
 }
 
-/** Registra um novo timer de reteste pra esse motorista (chamado quando o resultado é Positivo) */
-function iniciarTimerReteste({ base, sheetName, rowIndex, motorista, matricula, empresa }) {
-  // Remove qualquer reteste pendente anterior do mesmo motorista (evita duplicar)
-  retestesPendentes = retestesPendentes.filter(r => r.matricula !== matricula);
-  retestesPendentes.push({
-    id: `${matricula}-${Date.now()}`,
-    base, sheetName, rowIndex, motorista, matricula, empresa,
-    expiraEm: Date.now() + RETESTE_MINUTOS * 60 * 1000,
-    notificado: false
-  });
+/** Registra (ou avança) a cadeia de tentativas desse motorista — chamado
+ *  sempre que um resultado Positivo é registrado (seja o teste original
+ *  ou um reteste). Depois da 3ª tentativa positiva, marca contraprova
+ *  em vez de abrir um novo timer. */
+function iniciarOuAvancarTimerReteste({ motorista, matricula, empresa }) {
+  let entrada = retestesPendentes.find(r => r.matricula === matricula);
+  const tentativaFeita = entrada ? entrada.tentativa : 1; // 1 = já fez a 1ª (o teste original)
+
+  if (tentativaFeita >= 3) {
+    // 3ª tentativa também foi positiva -> encaminha pra contraprova, sem novo timer
+    entrada.tentativa = 3;
+    entrada.contraprova = true;
+    entrada.expiraEm = null;
+    entrada.notificado = true;
+  } else if (entrada) {
+    entrada.tentativa = tentativaFeita + 1;
+    entrada.expiraEm = Date.now() + RETESTE_MINUTOS * 60 * 1000;
+    entrada.notificado = false;
+  } else {
+    retestesPendentes.push({
+      id: `${matricula}-${Date.now()}`,
+      dia: hojeISO(),
+      motorista, matricula, empresa,
+      tentativa: 1,
+      expiraEm: Date.now() + RETESTE_MINUTOS * 60 * 1000,
+      notificado: false,
+      contraprova: false
+    });
+  }
+
   salvarRetestesPendentesLS();
   renderRetestes();
 }
 
-/** Reteste pendente (ainda contando ou já pronto) pro motorista atualmente selecionado, se houver */
+/** Cadeia de tentativas do motorista atualmente selecionado, se houver (hoje) */
 function retestePendenteDoMotoristaAtual() {
   if (!motoristaAtual) return null;
   return retestesPendentes.find(r => r.matricula === String(motoristaAtual.matricula)) || null;
@@ -120,16 +155,19 @@ function renderRetestes() {
     painel.classList.remove("hidden");
     lista.innerHTML = "";
     retestesPendentes.forEach(r => {
-      const restante = r.expiraEm - Date.now();
-      const pronto = restante <= 0;
+      const restante = r.expiraEm ? r.expiraEm - Date.now() : -1;
+      const pronto = !r.contraprova && restante <= 0;
       const item = document.createElement("div");
-      item.className = "reteste-item" + (pronto ? " pronto" : "");
+      item.className = "reteste-item" + (pronto || r.contraprova ? " pronto" : "");
+      const statusTexto = r.contraprova
+        ? "CONTRAPROVA"
+        : (pronto ? "PRONTO" : formatarContagem(restante));
       item.innerHTML = `
         <div>
           <div class="reteste-item-nome">${r.motorista}</div>
-          <div class="reteste-item-empresa">${r.empresa}</div>
+          <div class="reteste-item-empresa">${r.empresa} · tentativa ${r.tentativa}/3</div>
         </div>
-        <div class="reteste-item-timer">${pronto ? "PRONTO" : formatarContagem(restante)}</div>`;
+        <div class="reteste-item-timer">${statusTexto}</div>`;
       item.addEventListener("click", () => {
         const m = MOTORISTAS.find(mm => String(mm.matricula) === r.matricula);
         if (m) selecionarMotorista(m);
@@ -148,10 +186,10 @@ function tickRetestes() {
   let mudou = false;
 
   retestesPendentes.forEach(r => {
-    if (!r.notificado && Date.now() >= r.expiraEm) {
+    if (!r.contraprova && !r.notificado && r.expiraEm && Date.now() >= r.expiraEm) {
       r.notificado = true;
       mudou = true;
-      toast(`⏰ Hora do reteste: ${r.motorista}`);
+      toast(`⏰ Hora do reteste (tentativa ${r.tentativa + 1}/3): ${r.motorista}`);
     }
   });
 
@@ -168,13 +206,20 @@ function atualizarBannerReteste() {
     return;
   }
 
+  if (pendente.contraprova) {
+    banner.className = "banner error";
+    banner.innerHTML = `<span class="status-dot error"></span><span><strong>Encaminhar para CONTRAPROVA</strong> — o motorista atingiu 3 resultados positivos hoje (limite diário de tentativas). Não é possível registrar novo reteste por aqui.</span>`;
+    return;
+  }
+
   const restante = pendente.expiraEm - Date.now();
+  const proximaTentativa = pendente.tentativa + 1;
   if (restante > 0) {
     banner.className = "banner warn";
-    banner.innerHTML = `<span class="status-dot warn"></span><span>Aguardando tempo mínimo pro reteste — faltam ${formatarContagem(restante)}. Esse registro vai atualizar o teste original (colunas I/J), não criar um novo.</span>`;
+    banner.innerHTML = `<span class="status-dot warn"></span><span>Aguardando tempo mínimo pro reteste (tentativa ${proximaTentativa}/3) — faltam ${formatarContagem(restante)}.</span>`;
   } else {
     banner.className = "banner ok";
-    banner.innerHTML = `<span class="status-dot ok"></span><span>Pronto para reteste — o resultado será gravado no teste original (colunas I/J).</span>`;
+    banner.innerHTML = `<span class="status-dot ok"></span><span>Pronto para o reteste (tentativa ${proximaTentativa}/3).</span>`;
   }
 }
 
@@ -256,6 +301,7 @@ async function boot() {
   $("userRole").textContent = PERFIL.role === "instrutor" ? "Instrutor JCA" : "Operação/Tráfego";
   $("userEmpresa").textContent = PERFIL.empresa;
   aplicarLogoEmpresa(PERFIL.empresa);
+  aplicarAvatarGoogle();
 
   popularSelectEmpresas();
   await Promise.all([carregarMotoristas(), carregarEquipamentos()]);
@@ -608,10 +654,11 @@ function validarFormularioTeste() {
   const equipOk = serie && statusDoEquipamento(serie).ok;
   const localOk = valorLocalAplicacao() !== "";
   const pendente = retestePendenteDoMotoristaAtual();
-  const aguardandoReteste = pendente && (pendente.expiraEm - Date.now()) > 0;
+  const bloqueadoPorContraprova = pendente && pendente.contraprova;
+  const aguardandoReteste = pendente && !pendente.contraprova && (pendente.expiraEm - Date.now()) > 0;
   const camposOk = motoristaAtual && $("campoEmpresa").value && $("campoBase").value &&
     $("campoLocalTipo").value && localOk && resultadoSelecionado && resultadoNumericoValido() &&
-    !aguardandoReteste;
+    !aguardandoReteste && !bloqueadoPorContraprova;
   $("btnRegistrarTeste").disabled = !(equipOk && camposOk);
 }
 
@@ -658,33 +705,10 @@ async function registrarTeste(ev) {
   const base = $("campoBase").value; // "SAO" | "RIO" | "SUL"
   const sheetName = APP_CONFIG.bases[base];
   const resultadoNumerico = $("campoResultadoNumerico").value.trim();
-  const pendente = retestePendenteDoMotoristaAtual();
-  const ehReteste = pendente && (pendente.expiraEm - Date.now()) <= 0;
-
-  if (ehReteste) {
-    // RETESTE: atualiza só as colunas I (resultado) e J (resultado numérico)
-    // do teste ORIGINAL — não cria uma linha nova.
-    try {
-      await Sheets.updateRange(
-        `${pendente.sheetName}!I${pendente.rowIndex}:J${pendente.rowIndex}`,
-        [resultadoSelecionado, resultadoNumerico]
-      );
-      removerRetestePendente(pendente.matricula);
-      toast(`Reteste de ${pendente.motorista} registrado com sucesso.`);
-      mostrarResultadoFinal({ resultado: resultadoSelecionado, motorista: $("campoMotorista").value.trim(), dataHora: dataHoraBR() });
-      resetarFormularioTeste();
-    } catch (e) {
-      if (Sheets.tratarErroSessao(e)) return;
-      toast("Erro ao registrar o reteste: " + e.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Registrar Teste";
-    }
-    return;
-  }
-
-  // TESTE NORMAL (primeiro teste)
   const equipSelecionado = EQUIPAMENTOS.find(e => e.serie === $("campoEquipamento").value);
+  const pendente = retestePendenteDoMotoristaAtual();
+  const tentativaAtual = pendente ? pendente.tentativa + 1 : 1;
+
   const teste = {
     dataHora: dataHoraBR(),
     empresa: $("campoEmpresa").value,
@@ -696,7 +720,8 @@ async function registrarTeste(ev) {
     resultado: resultadoSelecionado,
     resultadoNumerico,
     equipamentoSerie: $("campoEquipamento").value,
-    equipamentoDescricao: equipSelecionado ? `${equipSelecionado.modelo} · Nº ${equipSelecionado.serie}` : $("campoEquipamento").value
+    equipamentoDescricao: equipSelecionado ? `${equipSelecionado.modelo} · Nº ${equipSelecionado.serie}` : $("campoEquipamento").value,
+    tentativa: tentativaAtual
   };
 
   let firebaseDocId = null;
@@ -707,20 +732,26 @@ async function registrarTeste(ev) {
   }
 
   try {
-    const resultadoAppend = await Sheets.appendRow(sheetName, [
+    // A Data/Hora B Empresa C Aplicador D Contrato/Local E Motorista F Setor G Resultado
+    // H Resultado(mg/L) I (reservado) J (reservado) K Equipamento L Tentativa do dia
+    await Sheets.appendRow(sheetName, [
       teste.dataHora, teste.empresa, teste.aplicador, teste.contrato, teste.motorista,
-      teste.setor, teste.resultado, teste.resultadoNumerico, "", "", teste.equipamentoDescricao
+      teste.setor, teste.resultado, teste.resultadoNumerico, "", "", teste.equipamentoDescricao, teste.tentativa
     ]);
     if (firebaseDocId) await FirebaseDB.marcarSincronizado(firebaseDocId).catch(() => {});
 
-    // Se reprovado, inicia o timer de 15min de reteste pra esse motorista
-    if (teste.resultado === "Positivo" && resultadoAppend.rowIndex) {
-      iniciarTimerReteste({
-        base, sheetName, rowIndex: resultadoAppend.rowIndex,
+    if (teste.resultado === "Positivo") {
+      iniciarOuAvancarTimerReteste({
         motorista: teste.motorista, matricula: String(motoristaAtual.matricula), empresa: teste.empresa
       });
-      toast(`Teste registrado. Reteste liberado em ${RETESTE_MINUTOS} min.`);
+      const entrada = retestePendenteDoMotoristaAtual();
+      if (entrada?.contraprova) {
+        toast(`3ª tentativa positiva — encaminhar ${teste.motorista} para CONTRAPROVA.`);
+      } else {
+        toast(`Teste registrado. Reteste (tentativa ${tentativaAtual + 1}/3) liberado em ${RETESTE_MINUTOS} min.`);
+      }
     } else {
+      if (pendente) removerRetestePendente(pendente.matricula); // negativo encerra a cadeia
       toast("Teste registrado com sucesso.");
     }
 

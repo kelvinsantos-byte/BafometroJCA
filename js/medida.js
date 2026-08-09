@@ -85,6 +85,24 @@ function aoTrocarDoseResultado() {
     `Colaborador reprovado no teste de etilômetro, resultando em sua inaptidão para assumir a operação e conduzir o veículo, prevenindo a exposição da operação a riscos e reforçando o compromisso com a segurança — resultado do teste: ${dose} MG/L.`;
 }
 
+/** Alterna entre "Teste Positivo" (pede o resultado em mg/L) e "Recusa"
+ *  (esconde o campo de resultado, já que não houve teste, e preenche
+ *  as observações com o texto padrão de recusa) */
+function aoTrocarMotivoFato() {
+  const motivo = $("mdMotivoFato").value;
+  const ehRecusa = motivo === "Recusou realizar teste de alcoolemia";
+
+  $("blocoDoseResultado").classList.toggle("hidden", ehRecusa);
+
+  if (ehRecusa) {
+    $("mdDoseResultado").value = "";
+    $("mdObservacoes").value =
+      "Colaborador recusou-se a realizar o teste de etilômetro, descumprindo o procedimento de segurança estabelecido para liberação à operação.";
+  } else {
+    $("mdObservacoes").value = "";
+  }
+}
+
 function formatarDataExtenso(iso) {
   if (!iso) return { dia: "____", mes: "____________", ano: "____" };
   const [ano, mes, dia] = iso.split("-");
@@ -334,6 +352,7 @@ async function initMedida() {
     setTimeout(() => renderSugestoesFuncionario([]), 150);
   });
   $("mdTipoMedida").addEventListener("change", aoTrocarTipoMedida);
+  $("mdMotivoFato").addEventListener("change", aoTrocarMotivoFato);
   $("mdDoseResultado").addEventListener("input", aoTrocarDoseResultado);
   $("formMedida").addEventListener("submit", gerarTermo);
 }

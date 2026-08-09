@@ -41,7 +41,7 @@ async function buscarTestesDoColaborador(matricula, dataInicio, dataFim) {
   ];
 
   const resultados = await Promise.all(
-    bases.map(b => Sheets.getValues(`${b.nome}!A2:K`).catch(() => []))
+    bases.map(b => Sheets.getValues(`${b.nome}!A2:L`).catch(() => []))
   );
 
   const inicio = new Date(dataInicio + "T00:00:00");
@@ -63,9 +63,8 @@ async function buscarTestesDoColaborador(matricula, dataInicio, dataFim) {
         setor: r[5] || "",
         resultado: r[6] || "",
         valor: r[7] || "",
-        reteste: r[8] || "",
-        valorReteste: r[9] || "",
-        equipamento: r[10] || ""
+        equipamento: r[10] || "",
+        tentativa: r[11] || "1"
       });
     });
   });
@@ -92,11 +91,10 @@ function montarHtmlEspelho(dados) {
     <tr>
       <td>${t.dataHoraTexto}</td>
       <td>${t.regional}</td>
+      <td>${t.tentativa}/3</td>
       <td>${t.equipamento || "—"}</td>
       <td class="${classeResultado(t.resultado)}">${textoResultado(t.resultado)}</td>
       <td>${t.valor || "0.00"} MG/L</td>
-      <td>${t.reteste ? textoResultado(t.reteste) : "—"}</td>
-      <td>${t.valorReteste || "—"}</td>
     </tr>`).join("");
 
   return `
@@ -194,11 +192,10 @@ function montarHtmlEspelho(dados) {
       <tr>
         <th>Data e Hora</th>
         <th>Regional</th>
+        <th>Tentativa</th>
         <th>Etilômetro</th>
         <th>Resultado</th>
         <th>Valor</th>
-        <th>Reteste</th>
-        <th>Valor Reteste</th>
       </tr>
     </thead>
     <tbody>
@@ -206,6 +203,11 @@ function montarHtmlEspelho(dados) {
     </tbody>
   </table>
   ` : `<div class="empty">Nenhum teste encontrado pra esse colaborador nesse período.</div>`}
+
+  ${dados.testes.some(t => t.tentativa == 3 && classeResultado(t.resultado) === "risco") ? `
+  <div style="margin-top:12px; padding:10px 12px; background:#fdecea; border:1px solid #c0392b; color:#c0392b; font-size:10.5px; font-weight:bold;">
+    ⚠ Consta 3ª tentativa positiva no período — colaborador encaminhado para CONTRAPROVA.
+  </div>` : ""}
 
   <p class="rodape-resumo">Relatório gerado em ${new Date().toLocaleString("pt-BR")} — Bafômetro JCA / Grupo JCA.</p>
 

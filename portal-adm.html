@@ -21,6 +21,7 @@
       <span class="brand-text">Bafômetro <span>JCA</span></span>
     </div>
     <div class="user-chip">
+      <img class="user-avatar" id="userAvatar" alt="" style="display:none;">
       <img class="company-logo-badge" id="companyLogo" alt="" style="display:none;">
       <div>
         <div id="userName" style="color:var(--tx); font-weight:600; font-family:var(--fd);">—</div>
@@ -37,7 +38,7 @@
       <div class="tab" data-panel="painelUsuario">Usuários</div>
       <div class="tab" data-panel="painelOcorrencia">Ocorrências</div>
       <div class="tab" data-panel="painelMedida">Medida Disciplinar</div>
-      <div class="tab" data-panel="painelFiscalizacao">Fiscalização</div>
+      <div class="tab" data-panel="painelFiscalizacao">Relatório</div>
     </div>
 
     <!-- ===================== CADASTRAR EQUIPAMENTO ===================== -->
@@ -219,10 +220,13 @@
 
         <div class="field">
           <label>Motivo do Fato</label>
-          <textarea id="mdMotivoFato" rows="2" class="ftextarea-plain" required>Teste positivo para alcoolemia</textarea>
+          <select id="mdMotivoFato" required>
+            <option value="Teste Positivo para alcoolemia">Teste Positivo para alcoolemia</option>
+            <option value="Recusou realizar teste de alcoolemia">Recusou realizar teste de alcoolemia</option>
+          </select>
         </div>
 
-        <div class="field">
+        <div class="field" id="blocoDoseResultado">
           <label>Resultado do teste (mg/L)</label>
           <input type="text" id="mdDoseResultado" placeholder="0.03" inputmode="decimal">
           <p class="hint">Usado pra montar o texto automático das Observações.</p>
@@ -256,7 +260,7 @@
     <!-- ===================== FISCALIZAÇÃO (ESPELHO DE PONTO) ===================== -->
     <section class="tab-panel" id="painelFiscalizacao" style="display:none;">
       <form id="formFiscalizacao" class="card">
-        <h2>Espelho de Testes — Fiscalização</h2>
+        <h2>Espelho de Testes — Relatório</h2>
 
         <div class="field">
           <label>Matrícula do colaborador</label>
