@@ -1,4 +1,4 @@
-const CACHE_NAME = "bafometro-jca-v55";
+const CACHE_NAME = "bafometro-jca-v56";
 
 const APP_SHELL = [
   "index.html",
@@ -43,7 +43,7 @@ self.addEventListener("activate", (event) => {
 // Estratégia: network-first para APIs (Google/Firebase), cache-first para o app shell
 self.addEventListener("fetch", (event) => {
   const url = event.request.url;
-  const isExternalApi = url.includes("googleapis.com") || url.includes("firestore") || url.includes("gstatic.com");
+  const isExternalApi = url.includes("googleapis.com") || url.includes("firestore") || url.includes("gstatic.com") || url.includes("script.google.com");
 
   if (isExternalApi) return; // deixa passar direto para a rede, sem cache
 
