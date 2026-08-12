@@ -36,9 +36,11 @@ os nomes e a ordem das colunas (linha 1 = cabeçalho):
 
 | Aba | Colunas |
 |---|---|
-| `BASE SAO`, `BASE RIO`, `BASE SUL` | A Data/Hora · B Empresa · C Aplicador · D Contrato/Local · E Motorista · F Setor · G Resultado Teste (Negativo/Positivo) · H Resultado (mg/L) · I/J *(legado, não usadas mais)* · K Equipamento · **L Tentativa do dia (1/2/3)** |
+| `BASE SAO`, `BASE RIO`, `BASE SUL` | A Data/Hora · B Empresa · C Aplicador · D Contrato/Local · E Motorista · F Setor · G Resultado Teste (Negativo/Positivo) · H Resultado (mg/L) · I Equipamento · J Tentativa do dia (1/2/3 ou "CP") · K Link Evidência Contraprova |
 | `CONTROLE DE EQUIPAMENTOS` | A Modelo · B Nº Série · C Aferição · D Validade · E Status · F Data de Baixa · G Garagem · **H Empresa** |
-| `MANUTENÇÃO EQUIPAMENTOS` | A Modelo · B Nº Série · C Data de Envio · D Data de Retorno · E Motivo Manutenção · F Baixa (data) · **G Registrado por** |
+| `MANUTENÇÃO EQUIPAMENTOS` | A Modelo · B Nº Série · C Data de Envio · D Data de Retorno · E Motivo Manutenção · F Baixa (data) · G Registrado por · **H Fornecedor** |
+| `FORNECEDORES` | A Nome Fantasia · B CNPJ · C Endereço · D Empresa · E Regional |
+| `CONTRAPROVA ESTOQUE` | A Garagem · B Empresa · C Quantidade Alocada · D Data · E Registrado por (cada linha = uma alocação; soma tudo por garagem) |
 | `CONTRATOS` | A Empresa · B Contrato |
 | `RECEPÇÃO ATIVA` | A Empresa · B Garagem |
 | `OPERAÇÃO / TRÁFEGO` | A Matrícula · B Nome · C Empresa · D E-mail |

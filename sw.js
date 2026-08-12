@@ -1,4 +1,4 @@
-const CACHE_NAME = "bafometro-jca-v47";
+const CACHE_NAME = "bafometro-jca-v55";
 
 const APP_SHELL = [
   "index.html",
@@ -8,10 +8,13 @@ const APP_SHELL = [
   "js/config.js",
   "js/auth.js",
   "js/sheets.js",
+  "js/drive.js",
   "js/firebase-init.js",
   "js/adm.js",
   "js/medida.js",
   "js/fiscalizacao.js",
+  "js/fornecedor.js",
+  "js/contraprova.js",
   "js/operacao.js",
   "js/pwa.js",
   "js/theme.js",

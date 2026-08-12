@@ -109,7 +109,9 @@ const APP_CONFIG = {
     instrutoresJca: "INSTRUTORES JCA",
     // Aba auxiliar (não estava na lista original, mas é necessária para
     // controlar quando um equipamento em manutenção pode voltar a ser usado)
-    manutencaoEquipamentos: "MANUTENÇÃO EQUIPAMENTOS"
+    manutencaoEquipamentos: "MANUTENÇÃO EQUIPAMENTOS",
+    fornecedores: "FORNECEDORES",
+    contraprovaEstoque: "CONTRAPROVA ESTOQUE"
   },
 
   // --------------------------------------------------------
@@ -120,6 +122,14 @@ const APP_CONFIG = {
     "Defeito do Equipamento",
     "Aferição"
   ],
+
+  // --------------------------------------------------------
+  // 7b. APPS SCRIPT — recebe o upload das evidências de contraprova
+  //     e salva na pasta fixa do Drive (ver /apps-script/upload-
+  //     evidencias.gs). Depois de publicar o script como Web App,
+  //     cole aqui a URL que termina em "/exec".
+  // --------------------------------------------------------
+  appsScriptUploadUrl: "https://script.google.com/macros/s/AKfycbxsvwS8jdUn6CF1o5xiv4iaMbAMIfNezlB7rMei8H4cIcsvGEYkvVGUDGXrZpUHIvya/exec",
 
   // --------------------------------------------------------
   // 8. IDENTIDADE VISUAL — reaproveitada do projeto JCA Treinamentos

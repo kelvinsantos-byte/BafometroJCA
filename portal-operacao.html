@@ -105,7 +105,7 @@
           <p class="hint">Origem: aba RECEPÇÃO ATIVA.</p>
         </div>
 
-        <div class="field">
+        <div class="field" id="blocoEquipamento">
           <label>Equipamento utilizado</label>
           <div style="display:flex; gap:8px; align-items:stretch;">
             <select id="campoEquipamento" required style="flex:1;"></select>
@@ -130,6 +130,14 @@
           <p class="hint" id="resultadoNumericoErro" style="color:var(--red);"></p>
         </div>
 
+        <div class="banner hidden" id="bannerEstoqueContraprova"></div>
+
+        <div class="field hidden" id="blocoEvidenciaContraprova">
+          <label>Evidência da contraprova (foto ou PDF)</label>
+          <input type="file" id="campoEvidenciaContraprova" accept="image/*,application/pdf" capture="environment">
+          <p class="hint">Obrigatório só pra contraprova — tira foto na hora (celular) ou anexa um arquivo. Sobe automaticamente pro Drive ao registrar.</p>
+        </div>
+
         <button type="submit" class="btn" id="btnRegistrarTeste" disabled>Registrar Teste</button>
       </form>
     </section>
@@ -141,6 +149,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/sheets.js"></script>
+<script src="js/drive.js"></script>
 <script type="module" src="js/auth.js"></script>
 <script type="module" src="js/firebase-init.js"></script>
 <script src="js/pwa.js"></script>

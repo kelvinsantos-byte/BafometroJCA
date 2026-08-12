@@ -101,18 +101,26 @@ function salvarRetestesPendentesLS() {
  *  sempre que um resultado Positivo é registrado (seja o teste original
  *  ou um reteste). Depois da 3ª tentativa positiva, marca contraprova
  *  em vez de abrir um novo timer. */
-function iniciarOuAvancarTimerReteste({ motorista, matricula, empresa }) {
+function iniciarOuAvancarTimerReteste({ motorista, matricula, empresa, tentativaConcluida }) {
   let entrada = retestesPendentes.find(r => r.matricula === matricula);
-  const tentativaFeita = entrada ? entrada.tentativa : 1; // 1 = já fez a 1ª (o teste original)
 
-  if (tentativaFeita >= 3) {
-    // 3ª tentativa também foi positiva -> encaminha pra contraprova, sem novo timer
-    entrada.tentativa = 3;
-    entrada.contraprova = true;
-    entrada.expiraEm = null;
-    entrada.notificado = true;
+  if (tentativaConcluida >= 3) {
+    // A 3ª tentativa (a que acabou de ser enviada) também foi positiva
+    // -> encaminha pra contraprova, sem novo timer/reteste.
+    if (!entrada) {
+      entrada = {
+        id: `${matricula}-${Date.now()}`, dia: hojeISO(), motorista, matricula, empresa,
+        tentativa: 3, expiraEm: null, notificado: true, contraprova: true, encaminhadoGestor: false
+      };
+      retestesPendentes.push(entrada);
+    } else {
+      entrada.tentativa = 3;
+      entrada.contraprova = true;
+      entrada.expiraEm = null;
+      entrada.notificado = true;
+    }
   } else if (entrada) {
-    entrada.tentativa = tentativaFeita + 1;
+    entrada.tentativa = tentativaConcluida;
     entrada.expiraEm = Date.now() + RETESTE_MINUTOS * 60 * 1000;
     entrada.notificado = false;
   } else {
@@ -120,10 +128,11 @@ function iniciarOuAvancarTimerReteste({ motorista, matricula, empresa }) {
       id: `${matricula}-${Date.now()}`,
       dia: hojeISO(),
       motorista, matricula, empresa,
-      tentativa: 1,
+      tentativa: tentativaConcluida, // 1 = já fez a 1ª (o teste original)
       expiraEm: Date.now() + RETESTE_MINUTOS * 60 * 1000,
       notificado: false,
-      contraprova: false
+      contraprova: false,
+      encaminhadoGestor: false
     });
   }
 
@@ -159,9 +168,9 @@ function renderRetestes() {
       const pronto = !r.contraprova && restante <= 0;
       const item = document.createElement("div");
       item.className = "reteste-item" + (pronto || r.contraprova ? " pronto" : "");
-      const statusTexto = r.contraprova
-        ? "CONTRAPROVA"
-        : (pronto ? "PRONTO" : formatarContagem(restante));
+      const statusTexto = r.encaminhadoGestor
+        ? "GESTOR"
+        : (r.contraprova ? "CONTRAPROVA" : (pronto ? "PRONTO" : formatarContagem(restante)));
       item.innerHTML = `
         <div>
           <div class="reteste-item-nome">${r.motorista}</div>
@@ -200,15 +209,22 @@ function tickRetestes() {
 function atualizarBannerReteste() {
   const banner = $("bannerReteste");
   const pendente = retestePendenteDoMotoristaAtual();
+  atualizarBlocoEvidencia(pendente);
 
   if (!pendente) {
     banner.className = "banner hidden";
     return;
   }
 
-  if (pendente.contraprova) {
+  if (pendente.encaminhadoGestor) {
     banner.className = "banner error";
-    banner.innerHTML = `<span class="status-dot error"></span><span><strong>Encaminhar para CONTRAPROVA</strong> — o motorista atingiu 3 resultados positivos hoje (limite diário de tentativas). Não é possível registrar novo reteste por aqui.</span>`;
+    banner.innerHTML = `<span class="status-dot error"></span><span><strong>Encaminhar o motorista para o Gestor</strong> — a contraprova também deu positiva. Não é possível registrar mais nenhum teste pra esse motorista hoje.</span>`;
+    return;
+  }
+
+  if (pendente.contraprova) {
+    banner.className = "banner warn";
+    banner.innerHTML = `<span class="status-dot warn"></span><span><strong>Contraprova disponível</strong> — o motorista atingiu 3 resultados positivos hoje. Anexe a evidência (foto/PDF) abaixo e registre o resultado da contraprova.</span>`;
     return;
   }
 
@@ -220,6 +236,113 @@ function atualizarBannerReteste() {
   } else {
     banner.className = "banner ok";
     banner.innerHTML = `<span class="status-dot ok"></span><span>Pronto para o reteste (tentativa ${proximaTentativa}/3).</span>`;
+  }
+}
+
+/** Mostra o campo de upload de evidência (e esconde o de Equipamento —
+ *  contraprova é kit descartável, não aparelho cadastrado) só quando essa
+ *  submissão vai ser a contraprova em si (não nos retestes normais 1/2/3). */
+function atualizarBlocoEvidencia(pendente) {
+  const bloco = $("blocoEvidenciaContraprova");
+  const blocoEquip = $("blocoEquipamento");
+  const ehContraprovaAgora = pendente && pendente.contraprova && !pendente.encaminhadoGestor;
+
+  bloco.classList.toggle("hidden", !ehContraprovaAgora);
+  blocoEquip.classList.toggle("hidden", ehContraprovaAgora);
+  $("campoEquipamento").required = !ehContraprovaAgora;
+
+  if (!ehContraprovaAgora) {
+    $("campoEvidenciaContraprova").value = "";
+    ultimaChecagemEstoqueKey = null;
+    estoqueContraprovaAtual = null;
+    $("bannerEstoqueContraprova").className = "banner hidden";
+    return;
+  }
+
+  // Só refaz a checagem de estoque (chamada ao Sheets) quando a combinação
+  // motorista+garagem+local realmente mudou — evita bater na API a cada
+  // segundo (o tick do cronômetro chama essa função o tempo todo).
+  const chave = `${pendente.matricula}|${$("campoLocalTipo").value}|${$("campoGaragem").value}`;
+  if (chave === ultimaChecagemEstoqueKey) return;
+  ultimaChecagemEstoqueKey = chave;
+  atualizarEstoqueContraprovaUI(true);
+}
+
+let estoqueContraprovaAtual = null; // { garagem, disponivel } do último check feito
+let ultimaChecagemEstoqueKey = null; // evita rechecar o estoque a cada tick do timer
+
+/** Soma tudo que já foi alocado pra essa garagem (aba CONTRAPROVA ESTOQUE)
+ *  e conta quantos "CP" (contraprovas já usadas) existem nas abas BASE. */
+async function verificarEstoqueContraprova(garagem) {
+  const [estoqueRows, saoRows, rioRows, sulRows] = await Promise.all([
+    Sheets.getValues(`${APP_CONFIG.sheets.contraprovaEstoque}!A2:C`),
+    Sheets.getValues(`${APP_CONFIG.bases.SAO}!D2:J`),
+    Sheets.getValues(`${APP_CONFIG.bases.RIO}!D2:J`),
+    Sheets.getValues(`${APP_CONFIG.bases.SUL}!D2:J`)
+  ]);
+
+  let alocado = 0;
+  estoqueRows.forEach(r => { if (r[0] === garagem) alocado += parseInt(r[2], 10) || 0; });
+
+  let usado = 0;
+  [saoRows, rioRows, sulRows].forEach(rows => {
+    rows.forEach(r => {
+      // Faixa buscada foi D2:J -> r[0]=D(Contrato/Local) ... r[6]=J(Tentativa)
+      if (r[0] === garagem && r[6] === "CP") usado++;
+    });
+  });
+
+  return { alocado, usado, disponivel: alocado - usado };
+}
+
+async function atualizarEstoqueContraprovaUI(ehContraprovaAgora) {
+  const banner = $("bannerEstoqueContraprova");
+
+  if (!ehContraprovaAgora) {
+    banner.className = "banner hidden";
+    estoqueContraprovaAtual = null;
+    validarFormularioTeste();
+    return;
+  }
+
+  const localTipo = $("campoLocalTipo").value;
+  const garagem = $("campoGaragem").value;
+
+  if (localTipo !== "GARAGEM" || !garagem) {
+    banner.className = "banner warn";
+    banner.innerHTML = `<span class="status-dot warn"></span><span>Selecione "Garagem" no Local de Aplicação — é lá que ficam os kits de contraprova.</span>`;
+    estoqueContraprovaAtual = null;
+    validarFormularioTeste();
+    return;
+  }
+
+  banner.className = "banner warn";
+  banner.innerHTML = `<span class="status-dot warn"></span><span>Verificando estoque de contraprova em ${garagem}…</span>`;
+
+  try {
+    const info = await verificarEstoqueContraprova(garagem);
+    estoqueContraprovaAtual = { garagem, disponivel: info.disponivel };
+    if (info.disponivel > 0) {
+      banner.className = "banner ok";
+      banner.innerHTML = `<span class="status-dot ok"></span><span>Estoque de contraprova em ${garagem}: <strong>${info.disponivel} disponível(is)</strong> (${info.usado}/${info.alocado} usados).</span>`;
+    } else {
+      banner.className = "banner error";
+      banner.innerHTML = `<span class="status-dot error"></span><span>Sem testes de contraprova disponíveis em ${garagem}. Avise o ADM pra alocar mais antes de continuar.</span>`;
+    }
+  } catch (e) {
+    banner.className = "banner error";
+    banner.innerHTML = `<span class="status-dot error"></span><span>Erro ao verificar estoque: ${e.message}</span>`;
+    estoqueContraprovaAtual = null;
+  }
+  validarFormularioTeste();
+}
+
+function marcarEncaminhadoGestor(matricula) {
+  const entrada = retestesPendentes.find(r => r.matricula === matricula);
+  if (entrada) {
+    entrada.encaminhadoGestor = true;
+    salvarRetestesPendentesLS();
+    renderRetestes();
   }
 }
 
@@ -241,7 +364,7 @@ async function buscarHistoricoMotorista(matricula) {
   ];
 
   const resultados = await Promise.all(
-    sheets.map(s => Sheets.getValues(`${s.nome}!A2:J`).catch(() => []))
+    sheets.map(s => Sheets.getValues(`${s.nome}!A2:K`).catch(() => []))
   );
 
   const registros = [];
@@ -254,7 +377,7 @@ async function buscarHistoricoMotorista(matricula) {
           data: parseDataHoraBR(r[0]),
           dataTexto: r[0],
           resultado: r[6] || "",
-          reteste: r[8] || ""
+          tentativa: r[9] || "1"
         });
       }
     });
@@ -276,10 +399,10 @@ function renderHistoricoMotorista(registros) {
       const pass = reg.resultado === "Negativo" || reg.resultado === "Aprovado"; // compatível com registros antigos
       const div = document.createElement("div");
       div.className = "historico-item";
-      const reteste = reg.reteste ? ` · reteste: ${reg.reteste}` : "";
+      const tentativaTexto = reg.tentativa === "CP" ? " · contraprova" : (reg.tentativa > 1 ? ` · tentativa ${reg.tentativa}` : "");
       div.innerHTML = `
         <span class="data">${reg.dataTexto} · ${reg.base}</span>
-        <span class="pill ${pass ? "ok" : "error"}">${reg.resultado}${reteste}</span>`;
+        <span class="pill ${pass ? "ok" : "error"}">${reg.resultado}${tentativaTexto}</span>`;
       box.appendChild(div);
     });
   }
@@ -605,12 +728,19 @@ function aoTrocarLocalTipo() {
   $("blocoContrato").classList.toggle("hidden", tipo !== "CONTRATO");
   $("blocoGaragem").classList.toggle("hidden", tipo !== "GARAGEM");
   atualizarListaEquipamentosDisponiveis();
+  reavaliarEstoqueSeContraprova();
   validarFormularioTeste();
 }
 
 function aoTrocarGaragem() {
   atualizarListaEquipamentosDisponiveis();
+  reavaliarEstoqueSeContraprova();
   validarFormularioTeste();
+}
+
+function reavaliarEstoqueSeContraprova() {
+  const pendente = retestePendenteDoMotoristaAtual();
+  atualizarBlocoEvidencia(pendente);
 }
 
 /** Valor final que vai pra coluna D (Contrato) da planilha — depende do tipo escolhido */
@@ -650,15 +780,25 @@ function aoDigitarResultadoNumerico() {
 }
 
 function validarFormularioTeste() {
-  const serie = $("campoEquipamento").value;
-  const equipOk = serie && statusDoEquipamento(serie).ok;
-  const localOk = valorLocalAplicacao() !== "";
   const pendente = retestePendenteDoMotoristaAtual();
-  const bloqueadoPorContraprova = pendente && pendente.contraprova;
+  const ehContraprovaAgora = pendente && pendente.contraprova && !pendente.encaminhadoGestor;
+
+  const serie = $("campoEquipamento").value;
+  const equipOk = ehContraprovaAgora || (serie && statusDoEquipamento(serie).ok);
+  const localOk = valorLocalAplicacao() !== "";
+
+  const bloqueadoDefinitivo = pendente && pendente.encaminhadoGestor;
   const aguardandoReteste = pendente && !pendente.contraprova && (pendente.expiraEm - Date.now()) > 0;
+  const evidenciaOk = !ehContraprovaAgora || ($("campoEvidenciaContraprova").files && $("campoEvidenciaContraprova").files.length > 0);
+  const estoqueOk = !ehContraprovaAgora || (
+    estoqueContraprovaAtual &&
+    estoqueContraprovaAtual.garagem === $("campoGaragem").value &&
+    estoqueContraprovaAtual.disponivel > 0
+  );
+
   const camposOk = motoristaAtual && $("campoEmpresa").value && $("campoBase").value &&
     $("campoLocalTipo").value && localOk && resultadoSelecionado && resultadoNumericoValido() &&
-    !aguardandoReteste && !bloqueadoPorContraprova;
+    !aguardandoReteste && !bloqueadoDefinitivo && evidenciaOk && estoqueOk;
   $("btnRegistrarTeste").disabled = !(equipOk && camposOk);
 }
 
@@ -677,6 +817,7 @@ function setupEventos() {
   $("campoEquipamento").addEventListener("change", atualizarBannerEquipamento);
   $("btnAtualizarEquipamentos").addEventListener("click", () => atualizarEquipamentosAgora(true));
   $("campoResultadoNumerico").addEventListener("input", aoDigitarResultadoNumerico);
+  $("campoEvidenciaContraprova").addEventListener("change", validarFormularioTeste);
 
   document.querySelectorAll(".result-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -707,7 +848,34 @@ async function registrarTeste(ev) {
   const resultadoNumerico = $("campoResultadoNumerico").value.trim();
   const equipSelecionado = EQUIPAMENTOS.find(e => e.serie === $("campoEquipamento").value);
   const pendente = retestePendenteDoMotoristaAtual();
-  const tentativaAtual = pendente ? pendente.tentativa + 1 : 1;
+  const ehContraprovaAgora = pendente && pendente.contraprova && !pendente.encaminhadoGestor;
+  const tentativaAtual = ehContraprovaAgora ? "CP" : (pendente ? pendente.tentativa + 1 : 1);
+
+  // Contraprova exige o upload da evidência ANTES de gravar o teste
+  let linkEvidencia = "";
+  if (ehContraprovaAgora) {
+    const arquivo = $("campoEvidenciaContraprova").files[0];
+    if (!arquivo) {
+      toast("Anexe a evidência da contraprova antes de registrar.");
+      btn.disabled = false;
+      btn.textContent = "Registrar Teste";
+      return;
+    }
+    try {
+      btn.innerHTML = '<span class="spinner"></span> Subindo evidência…';
+      const extensao = (arquivo.name && arquivo.name.includes(".")) ? arquivo.name.split(".").pop() : "jpg";
+      const nomeArquivo = `contraprova-${motoristaAtual.matricula}-${hojeISO()}-${Date.now()}.${extensao}`;
+      const resultadoUpload = await Drive.uploadArquivo(arquivo, nomeArquivo);
+      linkEvidencia = resultadoUpload.webViewLink || "";
+    } catch (e) {
+      if (Sheets.tratarErroSessao(e)) return;
+      toast("Erro ao subir a evidência pro Drive: " + e.message);
+      btn.disabled = false;
+      btn.textContent = "Registrar Teste";
+      return;
+    }
+    btn.innerHTML = '<span class="spinner"></span> Registrando…';
+  }
 
   const teste = {
     dataHora: dataHoraBR(),
@@ -720,8 +888,9 @@ async function registrarTeste(ev) {
     resultado: resultadoSelecionado,
     resultadoNumerico,
     equipamentoSerie: $("campoEquipamento").value,
-    equipamentoDescricao: equipSelecionado ? `${equipSelecionado.modelo} · Nº ${equipSelecionado.serie}` : $("campoEquipamento").value,
-    tentativa: tentativaAtual
+    equipamentoDescricao: ehContraprovaAgora ? "Kit Contraprova (descartável)" : (equipSelecionado ? `${equipSelecionado.modelo} · Nº ${equipSelecionado.serie}` : $("campoEquipamento").value),
+    tentativa: tentativaAtual,
+    linkEvidencia
   };
 
   let firebaseDocId = null;
@@ -732,26 +901,32 @@ async function registrarTeste(ev) {
   }
 
   try {
-    // A Data/Hora B Empresa C Aplicador D Contrato/Local E Motorista F Setor G Resultado
-    // H Resultado(mg/L) I (reservado) J (reservado) K Equipamento L Tentativa do dia
+    // A Data/Hora B Empresa C Aplicador D Contrato/Local E Motorista F Setor
+    // G Resultado H Resultado(mg/L) I Equipamento J Tentativa do dia K Link Evidência Contraprova
     await Sheets.appendRow(sheetName, [
       teste.dataHora, teste.empresa, teste.aplicador, teste.contrato, teste.motorista,
-      teste.setor, teste.resultado, teste.resultadoNumerico, "", "", teste.equipamentoDescricao, teste.tentativa
+      teste.setor, teste.resultado, teste.resultadoNumerico, teste.equipamentoDescricao, teste.tentativa, teste.linkEvidencia
     ]);
     if (firebaseDocId) await FirebaseDB.marcarSincronizado(firebaseDocId).catch(() => {});
 
     if (teste.resultado === "Positivo") {
-      iniciarOuAvancarTimerReteste({
-        motorista: teste.motorista, matricula: String(motoristaAtual.matricula), empresa: teste.empresa
-      });
-      const entrada = retestePendenteDoMotoristaAtual();
-      if (entrada?.contraprova) {
-        toast(`3ª tentativa positiva — encaminhar ${teste.motorista} para CONTRAPROVA.`);
+      if (ehContraprovaAgora) {
+        marcarEncaminhadoGestor(String(motoristaAtual.matricula));
+        toast(`Contraprova positiva — encaminhar ${teste.motorista} para o GESTOR.`);
       } else {
-        toast(`Teste registrado. Reteste (tentativa ${tentativaAtual + 1}/3) liberado em ${RETESTE_MINUTOS} min.`);
+        iniciarOuAvancarTimerReteste({
+          motorista: teste.motorista, matricula: String(motoristaAtual.matricula), empresa: teste.empresa,
+          tentativaConcluida: tentativaAtual
+        });
+        const entrada = retestePendenteDoMotoristaAtual();
+        if (entrada?.contraprova) {
+          toast(`3ª tentativa positiva — encaminhar ${teste.motorista} para CONTRAPROVA.`);
+        } else {
+          toast(`Teste registrado. Reteste (tentativa ${tentativaAtual + 1}/3) liberado em ${RETESTE_MINUTOS} min.`);
+        }
       }
     } else {
-      if (pendente) removerRetestePendente(pendente.matricula); // negativo encerra a cadeia
+      if (pendente) removerRetestePendente(pendente.matricula); // negativo (mesmo na contraprova) encerra a cadeia
       toast("Teste registrado com sucesso.");
     }
 
@@ -791,6 +966,10 @@ function resetarFormularioTeste() {
   $("campoResultadoNumerico").value = "";
   $("resultadoNumericoErro").textContent = "";
   $("blocoResultadoNumerico").classList.add("hidden");
+  $("campoEvidenciaContraprova").value = "";
+  $("blocoEvidenciaContraprova").classList.add("hidden");
+  $("bannerEstoqueContraprova").className = "banner hidden";
+  estoqueContraprovaAtual = null;
   $("blocoHistorico").classList.add("hidden");
   $("bannerReteste").className = "banner hidden";
   document.querySelectorAll(".result-btn").forEach(b => b.classList.remove("selected", "pass", "fail"));

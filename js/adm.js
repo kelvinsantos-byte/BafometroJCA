@@ -83,6 +83,7 @@ async function boot() {
   setupTabs();
   setupEventos();
   await carregarGaragens();
+  await carregarFornecedoresParaOcorrencia();
   await Promise.all([carregarEquipamentos(), carregarUsuarios()]);
 
   if (Sheets.isMockMode()) {
@@ -109,6 +110,7 @@ function setupEventos() {
   $("campoMotivoOcorrencia").addEventListener("change", (e) => {
     const isManutencao = e.target.value === "Manutenção";
     $("blocoMotivoManutencao").style.display = isManutencao ? "block" : "none";
+    $("blocoFornecedorManutencao").style.display = isManutencao ? "block" : "none";
   });
   $("filtroGaragemEstoque").addEventListener("change", renderListaEquipamentos);
   $("btnSair").addEventListener("click", async () => {
@@ -136,6 +138,25 @@ async function carregarGaragens() {
     opt2.value = g.garagem;
     opt2.textContent = `${g.garagem} (${g.empresa})`;
     filtroSelect.appendChild(opt2);
+  });
+}
+
+let FORNECEDORES = [];
+
+async function carregarFornecedoresParaOcorrencia() {
+  const rows = await Sheets.getValues(`${APP_CONFIG.sheets.fornecedores}!A2:E`);
+  FORNECEDORES = rows
+    .map(r => ({ nome: r[0] || "", cnpj: r[1] || "", endereco: r[2] || "", empresa: r[3] || "", regional: r[4] || "" }))
+    .filter(f => f.nome && f.empresa === PERFIL.empresa); // só fornecedores da empresa desse ADM
+
+  const select = $("campoFornecedorManutencao");
+  if (!select) return;
+  select.innerHTML = '<option value="">Selecione o fornecedor…</option>';
+  FORNECEDORES.forEach(f => {
+    const opt = document.createElement("option");
+    opt.value = f.nome;
+    opt.textContent = `${f.nome} (${f.regional})`;
+    select.appendChild(opt);
   });
 }
 
@@ -188,14 +209,14 @@ async function cadastrarEquipamento(ev) {
 async function carregarEquipamentos() {
   const [equipRows, manutRows] = await Promise.all([
     Sheets.getValues(`${APP_CONFIG.sheets.equipamentos}!A2:H`),
-    Sheets.getValues(`${APP_CONFIG.sheets.manutencaoEquipamentos}!A2:G`)
+    Sheets.getValues(`${APP_CONFIG.sheets.manutencaoEquipamentos}!A2:H`)
   ]);
 
-  // A Modelo | B Nº Série | C Data de Envio | D Data de Retorno | E Motivo Manutenção | F Baixa | G Registrado por
+  // A Modelo | B Nº Série | C Data de Envio | D Data de Retorno | E Motivo Manutenção | F Baixa | G Registrado por | H Fornecedor
   MANUTENCOES = manutRows.map((r, i) => ({
     rowIndex: i + 2,
     modelo: r[0], serie: r[1], dataEnvio: r[2], dataRetorno: r[3],
-    motivo: r[4], baixa: r[5], registradoPor: r[6]
+    motivo: r[4], baixa: r[5], registradoPor: r[6], fornecedor: r[7] || ""
   }));
 
   // A Modelo | B Nº Série | C Aferição | D Validade | E Status | F Data de Baixa | G Garagem | H Empresa
@@ -310,17 +331,19 @@ async function registrarOcorrencia(ev) {
       toast(`Equipamento ${serie} baixado com sucesso.`);
     } else {
       const motivoManutencao = $("campoMotivoManutencao").value;
+      const fornecedor = $("campoFornecedorManutencao").value;
       await Sheets.appendRow(APP_CONFIG.sheets.manutencaoEquipamentos, [
-        equip.modelo, serie, hojeISO(), "", motivoManutencao, "", PERFIL.nome
+        equip.modelo, serie, hojeISO(), "", motivoManutencao, "", PERFIL.nome, fornecedor
       ]);
       await FirebaseDB.salvarOcorrenciaEquipamento({
-        serie, tipo: "Manutenção", motivo: motivoManutencao, registradoPor: PERFIL.nome, dataEnvio: hojeISO()
+        serie, tipo: "Manutenção", motivo: motivoManutencao, fornecedor, registradoPor: PERFIL.nome, dataEnvio: hojeISO()
       }).catch(() => {});
       toast(`Equipamento ${serie} enviado para manutenção (${motivoManutencao}).`);
     }
     await carregarEquipamentos();
     $("formOcorrencia").reset();
     $("blocoMotivoManutencao").style.display = "none";
+    $("blocoFornecedorManutencao").style.display = "none";
   } catch (e) {
     if (Sheets.tratarErroSessao(e)) return;
     toast("Erro ao registrar ocorrência: " + e.message);
@@ -384,7 +407,7 @@ function abrirModalEquipamento(serie) {
         html += `
           <div class="detalhe-linha" style="flex-direction:column; align-items:flex-start; gap:3px;">
             <span class="valor" style="text-align:left;">${m.motivo} — enviado em ${formatarData(m.dataEnvio)}</span>
-            <span class="label" style="font-size:0.75rem;">Por: ${m.registradoPor || "—"} · ${aberta ? "ainda em aberto" : "retornou em " + formatarData(m.dataRetorno)}</span>
+            <span class="label" style="font-size:0.75rem;">Por: ${m.registradoPor || "—"}${m.fornecedor ? " · Fornecedor: " + m.fornecedor : ""} · ${aberta ? "ainda em aberto" : "retornou em " + formatarData(m.dataRetorno)}</span>
           </div>`;
       }
     });

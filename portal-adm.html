@@ -39,6 +39,8 @@
       <div class="tab" data-panel="painelOcorrencia">Ocorrências</div>
       <div class="tab" data-panel="painelMedida">Medida Disciplinar</div>
       <div class="tab" data-panel="painelFiscalizacao">Relatório</div>
+      <div class="tab" data-panel="painelFornecedor">Fornecedores</div>
+      <div class="tab" data-panel="painelContraprova">Contraprova</div>
     </div>
 
     <!-- ===================== CADASTRAR EQUIPAMENTO ===================== -->
@@ -147,12 +149,20 @@
           </select>
         </div>
 
+        <div class="field" id="blocoFornecedorManutencao" style="display:none;">
+          <label>Fornecedor</label>
+          <select id="campoFornecedorManutencao">
+            <option value="">Selecione o fornecedor…</option>
+          </select>
+          <p class="hint">Lista da aba FORNECEDORES, filtrada pela sua empresa.</p>
+        </div>
+
         <button type="submit" class="btn" id="btnRegistrarOcorrencia">Registrar Ocorrência</button>
       </form>
 
       <div class="banner warn">
         <span class="status-dot warn"></span>
-        <span>Ao escolher "Baixa de Equipamento" o equipamento sai imediatamente da lista de uso. Ao escolher "Manutenção", ele fica bloqueado até um ADM lançar a data de retorno na aba MANUTENÇÃO EQUIPAMENTOS.</span>
+        <span>Ao escolher "Baixa de Equipamento" o equipamento sai imediatamente da lista de uso. Ao escolher "Manutenção", ele fica bloqueado até você registrar o retorno — clique no equipamento na aba "Equipamentos" e use o botão "Confirmar Retorno".</span>
       </div>
     </section>
 
@@ -281,6 +291,69 @@
         <button type="submit" class="btn" id="btnGerarEspelho">Gerar Espelho (PDF)</button>
       </form>
     </section>
+
+    <!-- ===================== FORNECEDORES ===================== -->
+    <section class="tab-panel" id="painelFornecedor" style="display:none;">
+      <form id="formFornecedor" class="card">
+        <h2>Cadastrar fornecedor</h2>
+
+        <div class="field">
+          <label>Nome Fantasia</label>
+          <input type="text" id="fnNome" placeholder="Ex: Alcotech Manutenções" required>
+        </div>
+        <div class="field">
+          <label>CNPJ</label>
+          <input type="text" id="fnCnpj" placeholder="00.000.000/0000-00" required>
+        </div>
+        <div class="field">
+          <label>Endereço</label>
+          <input type="text" id="fnEndereco" placeholder="Rua, número, cidade">
+        </div>
+        <div class="field">
+          <label>Regional</label>
+          <select id="fnRegional" required>
+            <option value="">Selecione…</option>
+            <option value="SAO">SAO</option>
+            <option value="RIO">RIO</option>
+            <option value="SUL">SUL</option>
+          </select>
+        </div>
+        <p class="hint" style="margin-bottom:14px;">A empresa é sua mesma empresa logada — esse fornecedor só vai aparecer pra quem for da mesma empresa na hora de enviar equipamento pra manutenção.</p>
+
+        <button type="submit" class="btn" id="btnCadastrarFornecedor">Cadastrar Fornecedor</button>
+      </form>
+
+      <div class="card">
+        <h2>Fornecedores cadastrados</h2>
+        <div id="listaFornecedores"></div>
+      </div>
+    </section>
+
+    <!-- ===================== CONTRAPROVA (ESTOQUE DE TESTES DESCARTÁVEIS) ===================== -->
+    <section class="tab-panel" id="painelContraprova" style="display:none;">
+      <form id="formContraprova" class="card">
+        <h2>Alocar testes de contraprova</h2>
+
+        <div class="field">
+          <label>Garagem</label>
+          <select id="cpGaragem" required>
+            <option value="">Selecione a garagem…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Quantidade a alocar</label>
+          <input type="number" id="cpQuantidade" min="1" placeholder="Ex: 10" required>
+          <p class="hint">Soma com o que já foi alocado antes pra essa garagem — não substitui.</p>
+        </div>
+
+        <button type="submit" class="btn" id="btnAlocarContraprova">Alocar Testes</button>
+      </form>
+
+      <div class="card">
+        <h2>Estoque por garagem</h2>
+        <div id="listaEstoqueContraprova"></div>
+      </div>
+    </section>
   </main>
 
   <!-- ===================== MODAL: DETALHE DO EQUIPAMENTO ===================== -->
@@ -305,5 +378,7 @@
 <script type="module" src="js/adm.js"></script>
 <script type="module" src="js/medida.js"></script>
 <script type="module" src="js/fiscalizacao.js"></script>
+<script type="module" src="js/fornecedor.js"></script>
+<script type="module" src="js/contraprova.js"></script>
 </body>
 </html>

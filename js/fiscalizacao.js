@@ -41,7 +41,7 @@ async function buscarTestesDoColaborador(matricula, dataInicio, dataFim) {
   ];
 
   const resultados = await Promise.all(
-    bases.map(b => Sheets.getValues(`${b.nome}!A2:L`).catch(() => []))
+    bases.map(b => Sheets.getValues(`${b.nome}!A2:K`).catch(() => []))
   );
 
   const inicio = new Date(dataInicio + "T00:00:00");
@@ -63,8 +63,9 @@ async function buscarTestesDoColaborador(matricula, dataInicio, dataFim) {
         setor: r[5] || "",
         resultado: r[6] || "",
         valor: r[7] || "",
-        equipamento: r[10] || "",
-        tentativa: r[11] || "1"
+        equipamento: r[8] || "",
+        tentativa: r[9] || "1",
+        linkEvidencia: r[10] || ""
       });
     });
   });
@@ -91,10 +92,11 @@ function montarHtmlEspelho(dados) {
     <tr>
       <td>${t.dataHoraTexto}</td>
       <td>${t.regional}</td>
-      <td>${t.tentativa}/3</td>
+      <td>${t.tentativa === "CP" ? "Contraprova" : t.tentativa + "/3"}</td>
       <td>${t.equipamento || "—"}</td>
       <td class="${classeResultado(t.resultado)}">${textoResultado(t.resultado)}</td>
       <td>${t.valor || "0.00"} MG/L</td>
+      <td>${t.linkEvidencia ? `<a href="${t.linkEvidencia}">Ver evidência</a>` : "—"}</td>
     </tr>`).join("");
 
   return `
@@ -196,6 +198,7 @@ function montarHtmlEspelho(dados) {
         <th>Etilômetro</th>
         <th>Resultado</th>
         <th>Valor</th>
+        <th>Evidência</th>
       </tr>
     </thead>
     <tbody>
@@ -207,6 +210,11 @@ function montarHtmlEspelho(dados) {
   ${dados.testes.some(t => t.tentativa == 3 && classeResultado(t.resultado) === "risco") ? `
   <div style="margin-top:12px; padding:10px 12px; background:#fdecea; border:1px solid #c0392b; color:#c0392b; font-size:10.5px; font-weight:bold;">
     ⚠ Consta 3ª tentativa positiva no período — colaborador encaminhado para CONTRAPROVA.
+  </div>` : ""}
+
+  ${dados.testes.some(t => t.tentativa === "CP" && classeResultado(t.resultado) === "risco") ? `
+  <div style="margin-top:8px; padding:10px 12px; background:#fdecea; border:2px solid #c0392b; color:#c0392b; font-size:10.5px; font-weight:bold;">
+    ⚠⚠ Contraprova também positiva no período — colaborador encaminhado para o GESTOR.
   </div>` : ""}
 
   <p class="rodape-resumo">Relatório gerado em ${new Date().toLocaleString("pt-BR")} — Bafômetro JCA / Grupo JCA.</p>
