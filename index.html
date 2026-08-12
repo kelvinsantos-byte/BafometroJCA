@@ -80,13 +80,13 @@
 
       <!-- Rápido Ribeirão (mesma logo nos dois temas) -->
       <span class="partner-logo-pair" role="img" aria-label="Rápido Ribeirão">
-        <span class="logo-face" style="padding: 2px 2px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786221932/rapidoribeirao-dark_swo7cs.png')"></span>
+        <span class="logo-face" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786221932/rapidoribeirao-dark_swo7cs.png')"></span>
       </span>
 
       <!-- Viação Cometa -->
       <span class="partner-logo-pair" role="img" aria-label="Viação Cometa">
-        <span class="logo-face logo-dark" style="padding: 2px 2px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786221930/cometa-dark_twlmxo.png')"></span>
-        <span class="logo-face logo-light" style="padding: 2px 2px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786221930/cometa-light_gix3kd.png')"></span>
+        <span class="logo-face logo-dark" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786221930/cometa-dark_twlmxo.png')"></span>
+        <span class="logo-face logo-light" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786221930/cometa-light_gix3kd.png')"></span>
       </span>
 
       <!-- Auto Viação Catarinense -->
@@ -97,8 +97,8 @@
 
       <!-- SIT Macaé -->
       <span class="partner-logo-pair" role="img" aria-label="SIT Macaé">
-        <span class="logo-face logo-dark" style="padding: 2px 2%; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786221932/sit-dark_jzrek0.png')"></span>
-        <span class="logo-face logo-light" style="padding: 2px 2px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786221933/sit-light_pgsr8p.png')"></span>
+        <span class="logo-face logo-dark" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786221932/sit-dark_jzrek0.png')"></span>
+        <span class="logo-face logo-light" style="padding: 0px 0px; background-image:url('https://res.cloudinary.com/dln0ctawv/image/upload/v1786221933/sit-light_pgsr8p.png')"></span>
       </span>
 
       <!-- Opção Fretur (mesma logo nos dois temas) -->
@@ -135,7 +135,18 @@
 
   async function boot() {
     try { FirebaseDB.init(); } catch (e) { console.warn(e); }
-    await Auth.init();
+
+    // Se acabamos de voltar do login redirecionado do Google, Auth.init()
+    // já traz o usuário processado — vai direto pro portal certo.
+    try {
+      const userVoltandoDoLogin = await Auth.init();
+      if (userVoltandoDoLogin) {
+        await redirecionar(userVoltandoDoLogin);
+        return;
+      }
+    } catch (err) {
+      showError(err.message || "Não foi possível entrar. Tente novamente.");
+    }
 
     if (Auth.isMockMode()) {
       btnLogin.style.display = "none";
@@ -178,11 +189,12 @@
     loginError.classList.remove("visible");
     btnLogin.disabled = true;
     try {
-      const userInfo = await Auth.signIn();
-      await redirecionar(userInfo);
+      // Isso navega a página inteira pro Google — não volta nada aqui.
+      // O resultado é processado em boot()/Auth.init() quando a pessoa
+      // retornar do login.
+      await Auth.signIn();
     } catch (err) {
       showError(err.message || "Não foi possível entrar. Tente novamente.");
-    } finally {
       btnLogin.disabled = false;
     }
   });

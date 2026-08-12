@@ -2,28 +2,26 @@
  * ============================================================
  *  AUTH.JS — Login Google restrito ao domínio JCA
  * ============================================================
- *  Usa o MESMO padrão da plataforma JCA Treinamentos (que já
- *  funciona em produção): SDK MODULAR do Firebase + signInWithPopup.
- *  Isso evita os bugs conhecidos do SDK "compat" com popups.
+ *  Usa signInWithRedirect (redirecionamento de página inteira)
+ *  em vez de signInWithPopup. Isso evita problemas com a política
+ *  de segurança Cross-Origin-Opener-Policy que alguns navegadores
+ *  aplicam por padrão e que podem travar o fluxo de popup — e
+ *  funciona igual em qualquer hospedagem (GitHub Pages, Firebase
+ *  Hosting, etc.), sem precisar configurar cabeçalhos no servidor.
  *
  *  Fluxo:
  *   1. Usuário clica em "Entrar com Google"
- *   2. Login via Firebase Authentication (popup, provedor Google),
- *      com o escopo extra do Sheets solicitado no mesmo consentimento
- *   3. O resultado traz DUAS coisas ao mesmo tempo:
- *        - uma sessão real no Firebase Auth (request.auth nas regras
- *          de segurança do Firestore deixa de ser null)
- *        - um access_token OAuth (via credential) usado pra ler/
- *          gravar na planilha do Google Sheets
- *   4. Validamos o domínio do e-mail (@viacaocometa.com etc.)
- *   5. Procuramos o e-mail nas abas ADM / OPERAÇÃO-TRÁFEGO /
- *      INSTRUTORES JCA para descobrir o perfil e liberar a rota
+ *   2. A página inteira navega pro Google, a pessoa faz login lá
+ *   3. O Google redireciona de volta pra essa mesma página
+ *   4. No carregamento da página, Auth.init() verifica se acabamos
+ *      de voltar de um login (getRedirectResult) e, se sim, já
+ *      processa o resultado (token, e-mail, validação de domínio)
  * ============================================================
  */
 
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut
+  getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut as fbSignOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const MOCK_MODE = !APP_CONFIG.googleClientId || APP_CONFIG.googleClientId.startsWith("COLE_AQUI");
@@ -49,25 +47,20 @@ function mockSignIn(email) {
   return Promise.resolve(userInfo);
 }
 
+/** Chamado uma vez, no carregamento da página. Se a pessoa acabou de
+ *  voltar do login do Google, processa o resultado e devolve
+ *  { email, name, picture }. Se não tem nada pendente, devolve null. */
 async function init() {
-  return Promise.resolve();
-}
-
-/** Dispara o popup de login (Firebase Auth + Google) e resolve com { email, name, picture } */
-async function signIn() {
-  if (MOCK_MODE) throw new Error("Auth em modo de teste — use o login simulado.");
-
-  const provider = new GoogleAuthProvider();
-  provider.addScope(APP_CONFIG.googleScopes);
+  if (MOCK_MODE) return null;
 
   let result;
   try {
-    result = await signInWithPopup(getAuthInstance(), provider);
+    result = await getRedirectResult(getAuthInstance());
   } catch (err) {
-    if (err.code === "auth/popup-closed-by-user") throw new Error("Login cancelado.");
-    if (err.code === "auth/popup-blocked") throw new Error("O navegador bloqueou o popup de login. Permita popups para este site.");
-    throw new Error(err.message || "Não foi possível entrar com o Google.");
+    throw new Error(mensagemErroAuth(err));
   }
+
+  if (!result) return null; // não voltamos de um login agora — segue normal
 
   const credential = GoogleAuthProvider.credentialFromResult(result);
   if (!credential || !credential.accessToken) {
@@ -92,6 +85,22 @@ async function signIn() {
   sessionStorage.setItem("baf_access_token", accessToken);
   sessionStorage.setItem("baf_user", JSON.stringify(userInfo));
   return userInfo;
+}
+
+function mensagemErroAuth(err) {
+  if (err.code === "auth/popup-closed-by-user") return "Login cancelado.";
+  return err.message || "Não foi possível entrar com o Google.";
+}
+
+/** Dispara o redirecionamento pro login do Google. A página navega
+ *  pra fora — não há nada útil pra "esperar" aqui, o resultado só
+ *  aparece depois, em Auth.init(), quando a pessoa voltar. */
+async function signIn() {
+  if (MOCK_MODE) throw new Error("Auth em modo de teste — use o login simulado.");
+
+  const provider = new GoogleAuthProvider();
+  provider.addScope(APP_CONFIG.googleScopes);
+  await signInWithRedirect(getAuthInstance(), provider);
 }
 
 function isDomainAllowed(email) {

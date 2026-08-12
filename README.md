@@ -125,9 +125,9 @@ bafometro/
 4. **Motoristas via JSON**: como pedido, os motoristas não vêm do Sheets — o
    autocomplete usa `data/motoristas.json`. Troque esse arquivo pela base real
    (ou aponte para uma API interna) quando for para produção.
-5. **Domínio "autoviacaocatarinense"**: no seu texto veio sem `.com.br` no
-   final — assumi `autoviacaocatarinense.com.br` (mesmo padrão dos outros).
-   Ajuste em `js/config.js` → `allowedDomains` se o domínio real for diferente.
+5. **Domínio da Catarinense**: confirmado como `catarinense.com.br` (não
+   `autoviacaocatarinense.com.br`, como estava assumido antes). Já corrigido
+   em `js/config.js` → `allowedDomains`, `firestore.rules` e no mock de dados.
 6. **Resultado do teste**: implementei como Aprovado/Reprovado (dois botões).
    Se vocês usam um valor numérico (ex: taxa de álcool), é só trocar o campo.
 
