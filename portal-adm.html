@@ -109,7 +109,7 @@
         </div>
         <div class="field">
           <label>Empresa</label>
-          <input type="text" id="usEmpresa" placeholder="Ex: Viação Cometa" required>
+          <input type="text" id="usEmpresa" readonly>
         </div>
 
         <button type="submit" class="btn" id="btnCadastrarUsuario">Cadastrar Usuário</button>
@@ -273,8 +273,31 @@
         <h2>Espelho de Testes — Relatório</h2>
 
         <div class="field">
+          <label>Tipo de Relatório</label>
+          <select id="fiTipo" required>
+            <option value="MOTORISTA">Motorista</option>
+            <option value="GARAGEM">Garagem</option>
+            <option value="CONTRATO">Contrato de Fretamento</option>
+          </select>
+        </div>
+
+        <div class="field" id="blocoFiMatricula">
           <label>Matrícula do colaborador</label>
-          <input type="text" id="fiMatricula" placeholder="Ex: 000001" required>
+          <input type="text" id="fiMatricula" placeholder="Ex: 000001">
+        </div>
+
+        <div class="field hidden" id="blocoFiGaragem">
+          <label>Garagem</label>
+          <select id="fiGaragem">
+            <option value="">Selecione a garagem…</option>
+          </select>
+        </div>
+
+        <div class="field hidden" id="blocoFiContrato">
+          <label>Contrato de Fretamento</label>
+          <select id="fiContrato">
+            <option value="">Selecione o contrato…</option>
+          </select>
         </div>
 
         <div class="field">
@@ -286,7 +309,7 @@
           <input type="date" id="fiDataFim" required>
         </div>
 
-        <p class="hint" style="margin-bottom:14px;">Busca os testes desse colaborador nas 3 regionais (SAO/RIO/SUL), dentro do período selecionado.</p>
+        <p class="hint" style="margin-bottom:14px;">Busca os testes nas 3 regionais (SAO/RIO/SUL), dentro do período selecionado. Nos relatórios por Garagem ou Contrato, os resultados vêm agrupados por dia, com todos os motoristas testados naquele dia.</p>
 
         <button type="submit" class="btn" id="btnGerarEspelho">Gerar Espelho (PDF)</button>
       </form>
@@ -303,7 +326,7 @@
         </div>
         <div class="field">
           <label>CNPJ</label>
-          <input type="text" id="fnCnpj" placeholder="00.000.000/0000-00" required>
+          <input type="text" id="fnCnpj" placeholder="00.000.000/0000-00" maxlength="18" required>
         </div>
         <div class="field">
           <label>Endereço</label>
@@ -336,9 +359,10 @@
 
         <div class="field">
           <label>Garagem</label>
-          <select id="cpGaragem" required>
-            <option value="">Selecione a garagem…</option>
+          <select id="cpGaragem">
+            <option value="">📦 Estoque geral (sem garagem definida ainda)</option>
           </select>
+          <p class="hint">Deixe em "Estoque geral" se ainda não sabe pra qual garagem vai — dá pra transferir depois.</p>
         </div>
         <div class="field">
           <label>Quantidade a alocar</label>
@@ -349,8 +373,23 @@
         <button type="submit" class="btn" id="btnAlocarContraprova">Alocar Testes</button>
       </form>
 
+      <form id="formTransferirContraprova" class="card">
+        <h2>Transferir do estoque geral pra uma garagem</h2>
+        <div class="field">
+          <label>Garagem de destino</label>
+          <select id="cpGaragemDestino" required>
+            <option value="">Selecione a garagem…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Quantidade a transferir</label>
+          <input type="number" id="cpQuantidadeTransferir" min="1" placeholder="Ex: 5" required>
+        </div>
+        <button type="submit" class="btn secondary" id="btnTransferirContraprova">Transferir</button>
+      </form>
+
       <div class="card">
-        <h2>Estoque por garagem</h2>
+        <h2>Estoque</h2>
         <div id="listaEstoqueContraprova"></div>
       </div>
     </section>

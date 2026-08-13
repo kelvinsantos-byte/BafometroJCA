@@ -4,13 +4,17 @@
  * ============================================================
  *  Aba CONTRAPROVA ESTOQUE no Sheets (só registra ALOCAÇÕES,
  *  nunca precisa ser "editada" depois — sempre soma):
- *  A Garagem | B Empresa | C Quantidade Alocada | D Data | E Registrado por
+ *  A Garagem (vazio = Estoque Geral) | B Empresa | C Quantidade
+ *  D Data | E Registrado por
+ *
+ *  Transferir do estoque geral pra uma garagem = duas linhas novas:
+ *  uma negativa em branco (saída do geral) e uma positiva na
+ *  garagem de destino (entrada) — mantém o histórico sempre por
+ *  soma, sem precisar editar linha nenhuma.
  *
  *  O "uso" não tem aba própria — é contado direto nas abas
  *  BASE SAO/RIO/SUL, procurando linhas com Tentativa = "CP"
- *  (coluna J) pra cada garagem. Isso evita duplicar controle:
- *  a mesma linha que já registra o teste em si também conta
- *  como consumo de estoque.
+ *  pra cada garagem.
  * ============================================================
  */
 
@@ -39,13 +43,17 @@ async function carregarGaragensParaContraprova() {
     .map(r => ({ empresa: r[0] || "", garagem: r[1] || "" }))
     .filter(g => g.garagem && g.empresa === perfil.empresa);
 
-  const select = $("cpGaragem");
-  select.innerHTML = '<option value="">Selecione a garagem…</option>';
-  GARAGENS_CP.forEach(g => {
-    const opt = document.createElement("option");
-    opt.value = g.garagem;
-    opt.textContent = g.garagem;
-    select.appendChild(opt);
+  ["cpGaragem", "cpGaragemDestino"].forEach(id => {
+    const select = $(id);
+    const manterPrimeira = select.options[0]; // mantém "estoque geral" ou "selecione"
+    select.innerHTML = "";
+    select.appendChild(manterPrimeira);
+    GARAGENS_CP.forEach(g => {
+      const opt = document.createElement("option");
+      opt.value = g.garagem;
+      opt.textContent = g.garagem;
+      select.appendChild(opt);
+    });
   });
 }
 
@@ -79,12 +87,12 @@ async function carregarEstoqueContraprova() {
     contarUsoPorGaragem()
   ]);
 
-  const alocadoPorGaragem = {};
+  const alocadoPorGaragem = {}; // "" = estoque geral
   rows.forEach(r => {
     const garagem = r[0] || "";
     const empresa = r[1] || "";
     const quantidade = parseInt(r[2], 10) || 0;
-    if (empresa === perfil.empresa && garagem) {
+    if (empresa === perfil.empresa) {
       alocadoPorGaragem[garagem] = (alocadoPorGaragem[garagem] || 0) + quantidade;
     }
   });
@@ -92,25 +100,32 @@ async function carregarEstoqueContraprova() {
   const list = $("listaEstoqueContraprova");
   list.innerHTML = "";
 
-  const garagensComEstoque = GARAGENS_CP.filter(g => alocadoPorGaragem[g.garagem] > 0);
+  const linhas = [];
 
-  if (!garagensComEstoque.length) {
+  const estoqueGeral = alocadoPorGaragem[""] || 0;
+  if (estoqueGeral > 0) {
+    linhas.push({ nome: "📦 Estoque geral (sem garagem)", alocado: estoqueGeral, usado: 0 });
+  }
+
+  GARAGENS_CP.forEach(g => {
+    const alocado = alocadoPorGaragem[g.garagem] || 0;
+    if (alocado > 0) linhas.push({ nome: g.garagem, alocado, usado: uso[g.garagem] || 0 });
+  });
+
+  if (!linhas.length) {
     list.innerHTML = '<div class="empty-state">Nenhum teste de contraprova alocado ainda.</div>';
     return;
   }
 
-  garagensComEstoque.forEach(g => {
-    const alocado = alocadoPorGaragem[g.garagem] || 0;
-    const usado = uso[g.garagem] || 0;
-    const disponivel = alocado - usado;
+  linhas.forEach(l => {
+    const disponivel = l.alocado - l.usado;
     const pillClass = disponivel <= 0 ? "error" : disponivel <= 2 ? "warn" : "ok";
-
     const row = document.createElement("div");
     row.className = "list-row";
     row.innerHTML = `
       <div>
-        <div>${g.garagem}</div>
-        <div class="muted mono">Usado ${usado}/${alocado}</div>
+        <div>${l.nome}</div>
+        <div class="muted mono">Usado ${l.usado}/${l.alocado}</div>
       </div>
       <span class="pill ${pillClass}">${disponivel} disponível${disponivel === 1 ? "" : "eis"}</span>`;
     list.appendChild(row);
@@ -122,9 +137,9 @@ async function alocarContraprova(ev) {
   const perfil = getPerfil();
   if (!perfil) return;
 
-  const garagem = $("cpGaragem").value;
+  const garagem = $("cpGaragem").value; // pode ficar vazio = estoque geral
   const quantidade = parseInt($("cpQuantidade").value, 10);
-  if (!garagem || !quantidade || quantidade < 1) return;
+  if (!quantidade || quantidade < 1) return;
 
   const btn = $("btnAlocarContraprova");
   btn.disabled = true;
@@ -134,7 +149,7 @@ async function alocarContraprova(ev) {
     await Sheets.appendRow(APP_CONFIG.sheets.contraprovaEstoque, [
       garagem, perfil.empresa, quantidade, new Date().toISOString().slice(0, 10), perfil.nome
     ]);
-    toast(`${quantidade} teste(s) alocado(s) para ${garagem}.`);
+    toast(`${quantidade} teste(s) alocado(s) para ${garagem || "o estoque geral"}.`);
     $("formContraprova").reset();
     await carregarEstoqueContraprova();
   } catch (e) {
@@ -146,11 +161,46 @@ async function alocarContraprova(ev) {
   }
 }
 
+async function transferirContraprova(ev) {
+  ev.preventDefault();
+  const perfil = getPerfil();
+  if (!perfil) return;
+
+  const destino = $("cpGaragemDestino").value;
+  const quantidade = parseInt($("cpQuantidadeTransferir").value, 10);
+  if (!destino || !quantidade || quantidade < 1) return;
+
+  const btn = $("btnTransferirContraprova");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Transferindo…';
+
+  try {
+    const hoje = new Date().toISOString().slice(0, 10);
+    // Sai do estoque geral (linha negativa) e entra na garagem de destino (linha positiva)
+    await Sheets.appendRow(APP_CONFIG.sheets.contraprovaEstoque, [
+      "", perfil.empresa, -quantidade, hoje, perfil.nome
+    ]);
+    await Sheets.appendRow(APP_CONFIG.sheets.contraprovaEstoque, [
+      destino, perfil.empresa, quantidade, hoje, perfil.nome
+    ]);
+    toast(`${quantidade} teste(s) transferido(s) para ${destino}.`);
+    $("formTransferirContraprova").reset();
+    await carregarEstoqueContraprova();
+  } catch (e) {
+    if (window.Sheets && Sheets.tratarErroSessao(e)) return;
+    toast("Erro ao transferir: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Transferir";
+  }
+}
+
 async function initContraprova() {
   if (!document.getElementById("formContraprova")) return; // painel só existe no portal ADM
   await carregarGaragensParaContraprova();
   await carregarEstoqueContraprova();
   $("formContraprova").addEventListener("submit", alocarContraprova);
+  $("formTransferirContraprova").addEventListener("submit", transferirContraprova);
 }
 
 initContraprova();

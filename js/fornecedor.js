@@ -97,10 +97,29 @@ async function cadastrarFornecedor(ev) {
   }
 }
 
+/** Formata em tempo real como 00.000.000/0000-00, aceitando só números digitados */
+function aoDigitarCnpj(ev) {
+  let digitos = ev.target.value.replace(/\D/g, "").slice(0, 14);
+  let formatado = digitos;
+  if (digitos.length > 2) formatado = digitos.slice(0, 2) + "." + digitos.slice(2);
+  if (digitos.length > 5) formatado = formatado.slice(0, 6) + "." + digitos.slice(5);
+  if (digitos.length > 8) formatado = formatado.slice(0, 10) + "/" + digitos.slice(8);
+  if (digitos.length > 12) formatado = formatado.slice(0, 15) + "-" + digitos.slice(12);
+  ev.target.value = formatado;
+}
+
 async function initFornecedor() {
   if (!document.getElementById("formFornecedor")) return; // painel só existe no portal ADM
   await carregarFornecedores();
   $("formFornecedor").addEventListener("submit", cadastrarFornecedor);
+  $("fnCnpj").addEventListener("input", aoDigitarCnpj);
+  ["fnNome", "fnEndereco"].forEach(id => {
+    $(id).addEventListener("input", () => {
+      const pos = $(id).selectionStart;
+      $(id).value = $(id).value.toUpperCase();
+      $(id).setSelectionRange(pos, pos);
+    });
+  });
 }
 
 initFornecedor();

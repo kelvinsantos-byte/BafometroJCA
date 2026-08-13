@@ -135,18 +135,7 @@
 
   async function boot() {
     try { FirebaseDB.init(); } catch (e) { console.warn(e); }
-
-    // Se acabamos de voltar do login redirecionado do Google, Auth.init()
-    // já traz o usuário processado — vai direto pro portal certo.
-    try {
-      const userVoltandoDoLogin = await Auth.init();
-      if (userVoltandoDoLogin) {
-        await redirecionar(userVoltandoDoLogin);
-        return;
-      }
-    } catch (err) {
-      showError(err.message || "Não foi possível entrar. Tente novamente.");
-    }
+    await Auth.init();
 
     if (Auth.isMockMode()) {
       btnLogin.style.display = "none";
@@ -189,12 +178,11 @@
     loginError.classList.remove("visible");
     btnLogin.disabled = true;
     try {
-      // Isso navega a página inteira pro Google — não volta nada aqui.
-      // O resultado é processado em boot()/Auth.init() quando a pessoa
-      // retornar do login.
-      await Auth.signIn();
+      const userInfo = await Auth.signIn();
+      await redirecionar(userInfo);
     } catch (err) {
       showError(err.message || "Não foi possível entrar. Tente novamente.");
+    } finally {
       btnLogin.disabled = false;
     }
   });

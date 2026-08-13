@@ -358,3 +358,21 @@ async function initMedida() {
 }
 
 initMedida();
+
+/* ---------------------------------------------------------- */
+/* MAIÚSCULO AUTOMÁTICO                                         */
+/* ---------------------------------------------------------- */
+
+function aplicarMaiusculoAutomaticoMedida(ids) {
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", () => {
+      const pos = el.selectionStart;
+      el.value = el.value.toUpperCase();
+      el.setSelectionRange(pos, pos);
+    });
+  });
+}
+
+aplicarMaiusculoAutomaticoMedida(["mdPrefixo", "mdLocalHora", "mdOrientadorNome", "mdOrientadorMatricula"]);

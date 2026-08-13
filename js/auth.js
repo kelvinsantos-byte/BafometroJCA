@@ -2,26 +2,19 @@
  * ============================================================
  *  AUTH.JS — Login Google restrito ao domínio JCA
  * ============================================================
- *  Usa signInWithRedirect (redirecionamento de página inteira)
- *  em vez de signInWithPopup. Isso evita problemas com a política
- *  de segurança Cross-Origin-Opener-Policy que alguns navegadores
- *  aplicam por padrão e que podem travar o fluxo de popup — e
- *  funciona igual em qualquer hospedagem (GitHub Pages, Firebase
- *  Hosting, etc.), sem precisar configurar cabeçalhos no servidor.
- *
- *  Fluxo:
- *   1. Usuário clica em "Entrar com Google"
- *   2. A página inteira navega pro Google, a pessoa faz login lá
- *   3. O Google redireciona de volta pra essa mesma página
- *   4. No carregamento da página, Auth.init() verifica se acabamos
- *      de voltar de um login (getRedirectResult) e, se sim, já
- *      processa o resultado (token, e-mail, validação de domínio)
+ *  Usa signInWithPopup (janela popup) em vez de signInWithRedirect.
+ *  O modo redirect depende de o Firebase Hosting estar publicado
+ *  de verdade no authDomain (controle-bafometro.firebaseapp.com)
+ *  pra fazer a ponte entre o Google e o app — como isso não está
+ *  publicado, o redirect trava com 404 em
+ *  /__/firebase/init.json. O popup não tem essa dependência e
+ *  funciona direto com qualquer hospedagem (GitHub Pages, local, etc).
  * ============================================================
  */
 
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut as fbSignOut
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const MOCK_MODE = !APP_CONFIG.googleClientId || APP_CONFIG.googleClientId.startsWith("COLE_AQUI");
@@ -47,20 +40,31 @@ function mockSignIn(email) {
   return Promise.resolve(userInfo);
 }
 
-/** Chamado uma vez, no carregamento da página. Se a pessoa acabou de
- *  voltar do login do Google, processa o resultado e devolve
- *  { email, name, picture }. Se não tem nada pendente, devolve null. */
+/** Chamado uma vez, no carregamento da página — não faz nada no modo
+ *  popup, só existe pra manter a mesma "forma" de chamada que o app usa */
 async function init() {
-  if (MOCK_MODE) return null;
+  return null;
+}
+
+function mensagemErroAuth(err) {
+  if (err.code === "auth/popup-closed-by-user") return "Login cancelado.";
+  if (err.code === "auth/popup-blocked") return "O navegador bloqueou o popup de login. Permita popups pra este site e tente de novo.";
+  return err.message || "Não foi possível entrar com o Google.";
+}
+
+/** Abre o popup de login do Google e já processa o resultado */
+async function signIn() {
+  if (MOCK_MODE) throw new Error("Auth em modo de teste — use o login simulado.");
+
+  const provider = new GoogleAuthProvider();
+  provider.addScope(APP_CONFIG.googleScopes);
 
   let result;
   try {
-    result = await getRedirectResult(getAuthInstance());
+    result = await signInWithPopup(getAuthInstance(), provider);
   } catch (err) {
     throw new Error(mensagemErroAuth(err));
   }
-
-  if (!result) return null; // não voltamos de um login agora — segue normal
 
   const credential = GoogleAuthProvider.credentialFromResult(result);
   if (!credential || !credential.accessToken) {
@@ -87,22 +91,6 @@ async function init() {
   return userInfo;
 }
 
-function mensagemErroAuth(err) {
-  if (err.code === "auth/popup-closed-by-user") return "Login cancelado.";
-  return err.message || "Não foi possível entrar com o Google.";
-}
-
-/** Dispara o redirecionamento pro login do Google. A página navega
- *  pra fora — não há nada útil pra "esperar" aqui, o resultado só
- *  aparece depois, em Auth.init(), quando a pessoa voltar. */
-async function signIn() {
-  if (MOCK_MODE) throw new Error("Auth em modo de teste — use o login simulado.");
-
-  const provider = new GoogleAuthProvider();
-  provider.addScope(APP_CONFIG.googleScopes);
-  await signInWithRedirect(getAuthInstance(), provider);
-}
-
 function isDomainAllowed(email) {
   return APP_CONFIG.allowedDomains.some(d => email.endsWith("@" + d));
 }
@@ -127,8 +115,6 @@ async function signOut() {
 /**
  * Procura o e-mail nas abas de cadastro e devolve o perfil encontrado.
  * Ordem de checagem: ADM > INSTRUTORES JCA > OPERAÇÃO / TRÁFEGO
- * (um mesmo e-mail pode existir em mais de uma aba; ADM tem prioridade
- * de acesso ao portal administrativo)
  */
 async function resolveProfile(email) {
   const [admRows, instrutorRows, operacaoRows] = await Promise.all([
@@ -167,7 +153,7 @@ async function resolveProfile(email) {
     };
   }
 
-  return null; // e-mail é do domínio JCA, mas não está cadastrado em nenhuma aba
+  return null;
 }
 
 window.Auth = {

@@ -78,6 +78,7 @@ async function boot() {
   $("userName").textContent = PERFIL.nome;
   $("userEmpresa").textContent = PERFIL.empresa;
   aplicarLogoEmpresa(PERFIL.empresa);
+  $("usEmpresa").value = PERFIL.empresa;
   aplicarAvatarGoogle();
 
   setupTabs();
@@ -526,7 +527,7 @@ async function cadastrarUsuario(ev) {
   const usuario = {
     matricula: $("usMatricula").value.trim(),
     nome: $("usNome").value.trim(),
-    empresa: $("usEmpresa").value.trim(),
+    empresa: PERFIL.empresa,
     email: $("usEmail").value.trim().toLowerCase()
   };
 
@@ -559,11 +560,14 @@ async function carregarUsuarios() {
   const rows = await Sheets.getValues(`${APP_CONFIG.sheets.operacaoTrafego}!A2:D`);
   const list = $("listaUsuarios");
   list.innerHTML = "";
-  if (!rows.length) {
-    list.innerHTML = '<div class="empty-state">Nenhum usuário cadastrado ainda.</div>';
+
+  const daEmpresa = rows.filter(r => (r[2] || "") === PERFIL.empresa);
+
+  if (!daEmpresa.length) {
+    list.innerHTML = '<div class="empty-state">Nenhum usuário cadastrado ainda nessa empresa.</div>';
     return;
   }
-  rows.slice().reverse().forEach(r => {
+  daEmpresa.slice().reverse().forEach(r => {
     const [matricula, nome, empresa, email] = r;
     const row = document.createElement("div");
     row.className = "list-row";
@@ -578,3 +582,21 @@ async function carregarUsuarios() {
 }
 
 boot();
+
+/* ---------------------------------------------------------- */
+/* MAIÚSCULO AUTOMÁTICO NOS CAMPOS DE TEXTO LIVRE                */
+/* ---------------------------------------------------------- */
+
+function aplicarMaiusculoAutomatico(ids) {
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", () => {
+      const pos = el.selectionStart;
+      el.value = el.value.toUpperCase();
+      el.setSelectionRange(pos, pos);
+    });
+  });
+}
+
+aplicarMaiusculoAutomatico(["eqModelo", "eqSerie", "usMatricula", "usNome"]);
