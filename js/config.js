@@ -51,7 +51,7 @@ const APP_CONFIG = {
   allowedDomains: [
     "viacaocometa.com.br",
     "autoviacao1001.com.br",
-    "autoviacaocatarinense.com.br",
+    "catarinense.com.br",
     "sitmacae.com.br",
     "opcaofretur.com.br"
   ],
