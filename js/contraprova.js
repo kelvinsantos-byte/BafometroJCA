@@ -127,7 +127,7 @@ async function carregarEstoqueContraprova() {
         <div>${l.nome}</div>
         <div class="muted mono">Usado ${l.usado}/${l.alocado}</div>
       </div>
-      <span class="pill ${pillClass}">${disponivel} disponível${disponivel === 1 ? "" : "eis"}</span>`;
+      <span class="pill ${pillClass}">${disponivel} ${disponivel === 1 ? "disponível" : "disponíveis"}</span>`;
     list.appendChild(row);
   });
 }

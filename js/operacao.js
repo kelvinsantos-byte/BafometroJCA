@@ -532,6 +532,7 @@ function aoTrocarEmpresa() {
   const empresa = $("campoEmpresa").value;
   $("campoContrato").innerHTML = '<option value="">Selecione o contrato…</option>';
   $("campoGaragem").innerHTML = '<option value="">Selecione a garagem…</option>';
+  $("campoContratoRelacionado").innerHTML = '<option value="">Selecione o contrato…</option>';
   if (empresa) carregarContratosEGaragens(empresa);
   atualizarListaEquipamentosDisponiveis();
   validarFormularioTeste();
@@ -544,6 +545,7 @@ async function carregarContratosEGaragens(empresa) {
   ]);
 
   const contratoSelect = $("campoContrato");
+  const contratoRelacionadoSelect = $("campoContratoRelacionado");
   contratoSelect.innerHTML = '<option value="">Selecione o contrato…</option>';
   contratos
     .filter(row => (row[0] || "").trim() === empresa)
@@ -552,6 +554,11 @@ async function carregarContratosEGaragens(empresa) {
       opt.value = row[1];
       opt.textContent = row[1];
       contratoSelect.appendChild(opt);
+
+      const opt2 = document.createElement("option");
+      opt2.value = row[1];
+      opt2.textContent = row[1];
+      contratoRelacionadoSelect.appendChild(opt2);
     });
 
   const garagemSelect = $("campoGaragem");
@@ -726,9 +733,27 @@ function formatarData(str) {
 function aoTrocarLocalTipo() {
   const tipo = $("campoLocalTipo").value;
   $("blocoContrato").classList.toggle("hidden", tipo !== "CONTRATO");
+  $("campoContrato").required = tipo === "CONTRATO";
   $("blocoGaragem").classList.toggle("hidden", tipo !== "GARAGEM");
+  $("campoGaragem").required = tipo === "GARAGEM";
+  $("blocoTipoServico").classList.toggle("hidden", tipo !== "GARAGEM");
+  $("campoTipoServico").required = tipo === "GARAGEM";
+  if (tipo !== "GARAGEM") {
+    $("campoTipoServico").value = "";
+    $("campoContratoRelacionado").value = "";
+    $("campoContratoRelacionado").required = false;
+    $("blocoContratoRelacionado").classList.add("hidden");
+  }
   atualizarListaEquipamentosDisponiveis();
   reavaliarEstoqueSeContraprova();
+  validarFormularioTeste();
+}
+
+function aoTrocarTipoServico() {
+  const ehFretamento = $("campoTipoServico").value === "FRETAMENTO";
+  $("blocoContratoRelacionado").classList.toggle("hidden", !ehFretamento);
+  $("campoContratoRelacionado").required = ehFretamento;
+  if (!ehFretamento) $("campoContratoRelacionado").value = "";
   validarFormularioTeste();
 }
 
@@ -796,18 +821,23 @@ function validarFormularioTeste() {
     estoqueContraprovaAtual.disponivel > 0
   );
 
+  const ehGaragem = $("campoLocalTipo").value === "GARAGEM";
+  const tipoServicoOk = !ehGaragem || $("campoTipoServico").value !== "";
+  const contratoRelacionadoOk = !ehGaragem || $("campoTipoServico").value !== "FRETAMENTO" || $("campoContratoRelacionado").value !== "";
+
   const camposOk = motoristaAtual && $("campoEmpresa").value && $("campoBase").value &&
     $("campoLocalTipo").value && localOk && resultadoSelecionado && resultadoNumericoValido() &&
-    !aguardandoReteste && !bloqueadoDefinitivo && evidenciaOk && estoqueOk;
+    !aguardandoReteste && !bloqueadoDefinitivo && evidenciaOk && estoqueOk && tipoServicoOk && contratoRelacionadoOk;
   $("btnRegistrarTeste").disabled = !(equipOk && camposOk);
 }
 
 function setupEventos() {
-  ["campoBase", "campoContrato"].forEach(id => {
+  ["campoBase", "campoContrato", "campoContratoRelacionado"].forEach(id => {
     $(id).addEventListener("change", validarFormularioTeste);
   });
   $("campoGaragem").addEventListener("change", aoTrocarGaragem);
   $("campoLocalTipo").addEventListener("change", aoTrocarLocalTipo);
+  $("campoTipoServico").addEventListener("change", aoTrocarTipoServico);
   $("campoMotorista").addEventListener("input", aoDigitarMotorista);
   $("campoMotorista").addEventListener("blur", () => {
     // pequeno atraso pra permitir que o click no item (mousedown) complete antes de esconder
@@ -877,12 +907,13 @@ async function registrarTeste(ev) {
     btn.innerHTML = '<span class="spinner"></span> Registrando…';
   }
 
+  const localTipoAtual = $("campoLocalTipo").value;
   const teste = {
     dataHora: dataHoraBR(),
     empresa: $("campoEmpresa").value,
     aplicador: PERFIL.nome,
     contrato: valorLocalAplicacao(), // vai pra coluna D — garagem ou contrato, conforme o "Local de Aplicação"
-    localTipo: $("campoLocalTipo").value, // "GARAGEM" | "CONTRATO" — guardado só no Firebase, referência interna
+    localTipo: localTipoAtual, // "GARAGEM" | "CONTRATO" — guardado só no Firebase, referência interna
     motorista: $("campoMotorista").value.trim(),
     setor: motoristaAtual?.setor || "",
     resultado: resultadoSelecionado,
@@ -890,7 +921,13 @@ async function registrarTeste(ev) {
     equipamentoSerie: $("campoEquipamento").value,
     equipamentoDescricao: ehContraprovaAgora ? "Kit Contraprova (descartável)" : (equipSelecionado ? `${equipSelecionado.modelo} · Nº ${equipSelecionado.serie}` : $("campoEquipamento").value),
     tentativa: tentativaAtual,
-    linkEvidencia
+    linkEvidencia,
+    // Contrato direto (Local de Aplicação = Contrato) já é fretamento por definição —
+    // preenche sozinho as colunas L/M, sem depender do fluxo pela garagem.
+    contratoRelacionado: localTipoAtual === "CONTRATO" ? $("campoContrato").value
+      : (localTipoAtual === "GARAGEM" ? $("campoContratoRelacionado").value : ""),
+    tipoServico: localTipoAtual === "CONTRATO" ? "FRETAMENTO"
+      : (localTipoAtual === "GARAGEM" ? $("campoTipoServico").value : "")
   };
 
   let firebaseDocId = null;
@@ -903,9 +940,11 @@ async function registrarTeste(ev) {
   try {
     // A Data/Hora B Empresa C Aplicador D Contrato/Local E Motorista F Setor
     // G Resultado H Resultado(mg/L) I Equipamento J Tentativa do dia K Link Evidência Contraprova
+    // L Contrato Relacionado (opcional, só quando aplicado numa garagem) M Tipo de Serviço
     await Sheets.appendRow(sheetName, [
       teste.dataHora, teste.empresa, teste.aplicador, teste.contrato, teste.motorista,
-      teste.setor, teste.resultado, teste.resultadoNumerico, teste.equipamentoDescricao, teste.tentativa, teste.linkEvidencia
+      teste.setor, teste.resultado, teste.resultadoNumerico, teste.equipamentoDescricao, teste.tentativa,
+      teste.linkEvidencia, teste.contratoRelacionado, teste.tipoServico
     ]);
     if (firebaseDocId) await FirebaseDB.marcarSincronizado(firebaseDocId).catch(() => {});
 
@@ -961,7 +1000,15 @@ function resetarFormularioTeste() {
   $("blocoContrato").classList.add("hidden");
   $("blocoGaragem").classList.add("hidden");
   $("campoContrato").innerHTML = '<option value="">Selecione o contrato…</option>';
+  $("campoContrato").required = false;
   $("campoGaragem").innerHTML = '<option value="">Selecione a garagem…</option>';
+  $("campoGaragem").required = false;
+  $("campoTipoServico").value = "";
+  $("campoTipoServico").required = false;
+  $("blocoTipoServico").classList.add("hidden");
+  $("campoContratoRelacionado").value = "";
+  $("campoContratoRelacionado").required = false;
+  $("blocoContratoRelacionado").classList.add("hidden");
   $("campoEquipamento").value = "";
   $("campoResultadoNumerico").value = "";
   $("resultadoNumericoErro").textContent = "";

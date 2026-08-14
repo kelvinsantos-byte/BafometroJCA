@@ -105,6 +105,24 @@
           <p class="hint">Origem: aba RECEPÇÃO ATIVA.</p>
         </div>
 
+        <div class="field hidden" id="blocoTipoServico">
+          <label>Tipo de Serviço</label>
+          <select id="campoTipoServico">
+            <option value="">Selecione…</option>
+            <option value="RODOVIÁRIO">Rodoviário</option>
+            <option value="FRETAMENTO">Fretamento</option>
+            <option value="TURISMO">Turismo</option>
+          </select>
+        </div>
+
+        <div class="field hidden" id="blocoContratoRelacionado">
+          <label>Contrato de Fretamento relacionado</label>
+          <select id="campoContratoRelacionado">
+            <option value="">Selecione o contrato…</option>
+          </select>
+          <p class="hint">Esse teste vai aparecer tanto no relatório da garagem quanto no relatório desse contrato.</p>
+        </div>
+
         <div class="field" id="blocoEquipamento">
           <label>Equipamento utilizado</label>
           <div style="display:flex; gap:8px; align-items:stretch;">

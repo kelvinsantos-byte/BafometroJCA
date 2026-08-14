@@ -89,7 +89,7 @@ async function buscarTestesBrutos(dataInicio, dataFim) {
   ];
 
   const resultados = await Promise.all(
-    bases.map(b => Sheets.getValues(`${b.nome}!A2:K`).catch(() => []))
+    bases.map(b => Sheets.getValues(`${b.nome}!A2:M`).catch(() => []))
   );
 
   const inicio = new Date(dataInicio + "T00:00:00");
@@ -113,7 +113,9 @@ async function buscarTestesBrutos(dataInicio, dataFim) {
         valor: r[7] || "",
         equipamento: r[8] || "",
         tentativa: r[9] || "1",
-        linkEvidencia: r[10] || ""
+        linkEvidencia: r[10] || "",
+        contratoRelacionado: r[11] || "",
+        tipoServico: r[12] || ""
       });
     });
   });
@@ -127,8 +129,15 @@ async function buscarTestesDoColaborador(matricula, dataInicio, dataFim) {
   return todos.filter(t => t.motorista.includes(`mat. ${matricula}`));
 }
 
-async function buscarTestesPorLocal(nomeLocal, dataInicio, dataFim) {
+/** Pra Garagem: testes aplicados diretamente ali (coluna local).
+ *  Pra Contrato: junta os testes aplicados diretamente no contrato
+ *  COM os testes aplicados numa garagem mas marcados como
+ *  "relacionados" a esse contrato — nenhum fica de fora. */
+async function buscarTestesPorLocal(nomeLocal, dataInicio, dataFim, tipo) {
   const todos = await buscarTestesBrutos(dataInicio, dataFim);
+  if (tipo === "CONTRATO") {
+    return todos.filter(t => t.local === nomeLocal || t.contratoRelacionado === nomeLocal);
+  }
   return todos.filter(t => t.local === nomeLocal);
 }
 
@@ -318,21 +327,28 @@ function montarHtmlEspelhoLocal(dados) {
   const dias = Object.keys(grupos); // já vem ordenado, pois dados.testes já está ordenado por data
 
   const blocosPorDia = dias.map(dia => {
-    const linhas = grupos[dia].map(t => `
+    const linhas = grupos[dia].map(t => {
+      const origem = dados.tipo === "CONTRATO"
+        ? `<td>${t.local === dados.local ? "Direto no contrato" : "Garagem " + t.local}</td>`
+        : "";
+      return `
       <tr>
         <td>${t.dataHoraTexto.split(",")[1]?.trim() || t.dataHoraTexto}</td>
         <td>${nomeMotorista(t.motorista)}</td>
         <td>${t.setor || "—"}</td>
+        ${origem}
         <td>${t.tentativa === "CP" ? "Contraprova" : t.tentativa + "/3"}</td>
         <td class="${classeResultado(t.resultado)}">${textoResultado(t.resultado)}</td>
         <td>${t.valor || "0.00"} MG/L</td>
-      </tr>`).join("");
+      </tr>`;
+    }).join("");
 
+    const thOrigem = dados.tipo === "CONTRATO" ? "<th>Origem</th>" : "";
     return `
     <h3 class="dia">${dia} — ${grupos[dia].length} teste(s)</h3>
     <table class="testes">
       <thead>
-        <tr><th>Hora</th><th>Motorista</th><th>Setor</th><th>Tentativa</th><th>Resultado</th><th>Valor</th></tr>
+        <tr><th>Hora</th><th>Motorista</th><th>Setor</th>${thOrigem}<th>Tentativa</th><th>Resultado</th><th>Valor</th></tr>
       </thead>
       <tbody>${linhas}</tbody>
     </table>`;
@@ -413,7 +429,7 @@ async function gerarEspelho(ev) {
     } else {
       const local = tipo === "GARAGEM" ? $("fiGaragem").value : $("fiContrato").value;
       if (!local) return;
-      const testes = await buscarTestesPorLocal(local, dataInicio, dataFim);
+      const testes = await buscarTestesPorLocal(local, dataInicio, dataFim, tipo);
       html = montarHtmlEspelhoLocal({
         tipo, local, empresa: perfil?.empresa || "", dataInicio, dataFim, testes
       });
